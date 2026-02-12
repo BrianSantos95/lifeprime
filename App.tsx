@@ -33,7 +33,17 @@ const getDateKey = (habitId: number, date: Date) => {
   return `${habitId}-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 };
 
+// ... imports
+import Auth from './components/Auth';
+import { supabase } from './lib/supabase';
+
+// ... (other imports remain the same)
+
 const App: React.FC = () => {
+  // --- Auth State ---
+  const [session, setSession] = useState<any>(null); // Using any for simplicity here, ideally Session type
+  const [authLoading, setAuthLoading] = useState(true);
+
   // --- State ---
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activePage, setActivePage] = useState('dashboard');
@@ -61,6 +71,35 @@ const App: React.FC = () => {
   const [habitAction, setHabitAction] = useState<'options' | 'rename' | 'delete' | null>(null);
   const [renameText, setRenameText] = useState('');
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  // --- Auth Effect ---
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (authLoading) {
+    return (
+      <div className="h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Auth onLoginSuccess={() => { }} />;
+  }
+
 
   // Daily Tasks State (Kanban)
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([
