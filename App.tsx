@@ -45,11 +45,10 @@ import { useSupabaseData } from './hooks/useSupabaseData';
 
 const App: React.FC = () => {
   // --- Auth State ---
-  const [session, setSession] = useState<any>(null); // Using any for simplicity here, ideally Session type
+  const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Load Data from Supabase
-  // MOVED UP to fix "Rendered fewer hooks than expected" error
+  // --- Data Hook ---
   const {
     loading: dataLoading,
     habits: habitDefs, setHabits: setHabitDefs,
@@ -61,17 +60,13 @@ const App: React.FC = () => {
     tasks: dailyTasks, setTasks: setDailyTasks
   } = useSupabaseData(session);
 
-  // --- State ---
+  // --- UI State ---
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activePage, setActivePage] = useState('dashboard');
-
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
-  const [newSectionName, setNewSectionName] = useState(''); // New State for Section Name
-  const [isNewSectionMode, setIsNewSectionMode] = useState(false); // Toggle for "Create Section" mode
-
-  // Habit Management State
+  const [newSectionName, setNewSectionName] = useState('');
+  const [isNewSectionMode, setIsNewSectionMode] = useState(false);
   const [activeHabit, setActiveHabit] = useState<Habit | null>(null);
   const [habitAction, setHabitAction] = useState<'options' | 'rename' | 'delete' | null>(null);
   const [renameText, setRenameText] = useState('');
@@ -79,9 +74,34 @@ const App: React.FC = () => {
   const [financeDate, setFinanceDate] = useState(new Date());
 
   // --- Auth Effect ---
-  // ... (auth effect remains)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
 
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
 
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // --- Conditional Returns (Must be after all hooks) ---
+  if (authLoading) {
+    return (
+      <div className="h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Auth onLoginSuccess={() => { }} />;
+  }
 
   // --- Derived Values ---
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
@@ -91,30 +111,6 @@ const App: React.FC = () => {
   const today = new Date();
   const isCurrentMonth = today.getMonth() === currentDate.getMonth() && today.getFullYear() === currentDate.getFullYear();
   const currentDayHighlight = isCurrentMonth ? today.getDate() : -1;
-
-  // --- Effects ---
-
-  // Initialize with some fake data for the current month only once
-  useEffect(() => {
-    const initialMap: Record<string, boolean> = {};
-    const todayDay = new Date().getDate();
-
-    // Check if we already have data to avoid overwriting user changes
-    if (Object.keys(completionsMap).length > 0) return;
-
-    habitDefs.forEach(habit => {
-      // Simulate random history for days before today in the current month
-      for (let i = 1; i < todayDay; i++) {
-        const date = new Date();
-        date.setDate(i);
-        if (Math.random() > 0.4) {
-          initialMap[getDateKey(habit.id, date)] = true;
-        }
-      }
-    });
-    setCompletionsMap(initialMap);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount
 
   // --- Handlers ---
 
