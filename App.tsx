@@ -666,14 +666,46 @@ const App: React.FC = () => {
     } catch (err) { console.error(err); }
   };
 
-  const handleToggleRecurringPay = (id: string, isPaid: boolean, amount?: number, date?: Date) => {
+  /* New: Delete Handler */
+  const handleDeleteRecurring = async (id: string) => {
+    if (!window.confirm('Excluir esta despesa recorrente?')) return;
+    setRecurringExpenses(prev => prev.filter(r => r.id !== id));
+    try {
+      const { error } = await supabase.from('recurring_expenses').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) { console.error(err); alert('Erro ao excluir despesa.'); }
+  };
+
+  const handleToggleRecurringPay = async (id: string, isPaid: boolean, amount?: number, date?: Date) => {
     if (isPaid && date && amount !== undefined) {
       handlePayRecurring(id, amount, date);
     } else {
-      // Unpay logic (Clear last_paid_date)
-      setRecurringExpenses(prev => prev.map(r => r.id === id ? { ...r, lastPaidDate: undefined } : r));
-      supabase.from('recurring_expenses').update({ last_paid_date: null }).eq('id', id)
-        .then(({ error }) => { if (error) console.error(error); });
+      // Unpay logic (Undo)
+      const expense = recurringExpenses.find(r => r.id === id);
+      if (!expense) return;
+
+      const updates: any = { last_paid_date: null };
+      let newCurrentInstallment = expense.currentInstallment;
+
+      // If it was an installment payment, revert the increment
+      if (expense.installmentsTotal && expense.currentInstallment && expense.currentInstallment > 1) {
+        newCurrentInstallment = expense.currentInstallment - 1;
+        updates.current_installment = newCurrentInstallment;
+      }
+
+      // Optimistic update
+      setRecurringExpenses(prev => prev.map(r => r.id === id ? {
+        ...r,
+        lastPaidDate: undefined,
+        currentInstallment: newCurrentInstallment
+      } : r));
+
+      alert('O pagamento foi revertido nas despesas fixas.\n\nIMPORTANTE: Verifique se existe uma transação duplicada no Extrato e exclua-a se necessário.');
+
+      try {
+        const { error } = await supabase.from('recurring_expenses').update(updates).eq('id', id);
+        if (error) throw error;
+      } catch (err) { console.error(err); }
     }
   };
 
@@ -1008,6 +1040,7 @@ const App: React.FC = () => {
               onAddRecurring={handleAddRecurring}
               onPayRecurring={handlePayRecurring}
               onEditBudget={handleEditBudget}
+              onDeleteRecurring={handleDeleteRecurring}
               onToggleRecurringPay={handleToggleRecurringPay}
               onEditTransaction={handleEditTransaction}
               onDeleteTransaction={handleDeleteTransaction}

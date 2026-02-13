@@ -20,6 +20,7 @@ interface FinanceDashboardProps {
     onToggleRecurringPay: (id: string, isPaid: boolean, amount?: number, date?: Date) => void;
     onEditTransaction: (id: string, updatedTransaction: Partial<Transaction>) => void;
     onDeleteTransaction: (id: string) => void;
+    onDeleteRecurring: (id: string) => void;
 }
 
 const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
@@ -38,7 +39,8 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     onEditBudget,
     onToggleRecurringPay,
     onEditTransaction,
-    onDeleteTransaction
+    onDeleteTransaction,
+    onDeleteRecurring
 }) => {
     // --- Local State for Modals ---
     const [isTransModalOpen, setIsTransModalOpen] = useState(false);
@@ -567,25 +569,29 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                                         <div className="flex items-center gap-3">
                                             {rec.amount && <span className="text-sm font-bold text-zinc-300">R$ {rec.amount}</span>}
                                             {isPaid ? (
-                                                <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">PAGO</span>
+                                                <button
+                                                    onClick={() => handleRecurringClick(rec, !!isPaid)}
+                                                    className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded hover:bg-red-500/10 hover:text-red-500 group/btn transition-colors"
+                                                    title="Desfazer pagamento"
+                                                >
+                                                    <span className="group-hover/btn:hidden">PAGO</span>
+                                                    <span className="hidden group-hover/btn:inline text-[10px]">DESFAZER</span>
+                                                </button>
                                             ) : (
                                                 <button
                                                     onClick={() => handleRecurringClick(rec, !!isPaid)}
-                                                    className={`text-xs px-3 py-1.5 rounded transition-colors ${isPaid
-                                                        ? 'bg-emerald-500/10 text-emerald-500 font-bold hover:bg-red-500/10 hover:text-red-500 cursor-pointer'
-                                                        : 'bg-zinc-800 hover:bg-zinc-700 text-white'
-                                                        }`}
+                                                    className="text-xs px-3 py-1.5 rounded transition-colors bg-zinc-800 hover:bg-zinc-700 text-white"
                                                 >
-                                                    {isPaid ? (
-                                                        <span className="group-hover/btn:hidden">PAGO</span>
-                                                    ) : (
-                                                        'Pagar'
-                                                    )}
-                                                    {isPaid && (
-                                                        <span className="hidden group-hover:inline text-[10px]">DESFAZER</span>
-                                                    )}
+                                                    Pagar
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={() => onDeleteRecurring(rec.id)}
+                                                className="p-1.5 hover:bg-red-500/10 rounded text-zinc-600 hover:text-red-500 transition-colors"
+                                                title="Excluir despesa"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
                                         </div>
                                     </div>
                                 );
