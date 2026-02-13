@@ -150,7 +150,7 @@ const App: React.FC = () => {
         const { error } = await supabase
           .from('habit_completions')
           .delete()
-          .match({ habit_id: habitId, date: dateStr });
+          .match({ habit_id: habitId, completed_date: dateStr }); // Correct column name
 
         if (error) throw error;
       } else {
@@ -160,7 +160,7 @@ const App: React.FC = () => {
           .insert({
             habit_id: habitId,
             user_id: session.user.id,
-            date: dateStr
+            completed_date: dateStr // Correct column name
           });
 
         if (error) throw error;
