@@ -105,6 +105,26 @@ const App: React.FC = () => {
 
   // --- Handlers ---
 
+  // Visual Weekly Calendar Logic (Moved to Top Level)
+  const weekOverview = useMemo(() => {
+    const todayObj = new Date();
+    const currentDay = todayObj.getDay(); // 0-6
+    const startOfWeek = new Date(todayObj);
+    startOfWeek.setDate(todayObj.getDate() - currentDay); // Go back to Sunday
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      return {
+        date: d,
+        isToday: d.toDateString() === todayObj.toDateString(),
+        dayStr: d.getDate().toString().padStart(2, '0'),
+        monthStr: (d.getMonth() + 1).toString().padStart(2, '0'),
+        weekDay: d.toLocaleDateString('pt-BR', { weekday: 'short' }).slice(0, 3).replace('.', '')
+      };
+    });
+  }, []);
+
   const handlePrevMonth = () => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
@@ -677,25 +697,7 @@ const App: React.FC = () => {
     setHabitDefs([...otherHabits, ...newOrderedSectionHabits]);
   };
 
-  // Visual Weekly Calendar Logic
-  const weekOverview = useMemo(() => {
-    const todayObj = new Date();
-    const currentDay = todayObj.getDay(); // 0-6
-    const startOfWeek = new Date(todayObj);
-    startOfWeek.setDate(todayObj.getDate() - currentDay); // Go back to Sunday
 
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
-      return {
-        date: d,
-        isToday: d.toDateString() === todayObj.toDateString(),
-        dayStr: d.getDate().toString().padStart(2, '0'),
-        monthStr: (d.getMonth() + 1).toString().padStart(2, '0'),
-        weekDay: d.toLocaleDateString('pt-BR', { weekday: 'short' }).slice(0, 3).replace('.', '')
-      };
-    });
-  }, []);
 
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-zinc-300 font-sans overflow-hidden">
@@ -720,8 +722,8 @@ const App: React.FC = () => {
                       <div
                         key={idx}
                         className={`flex flex-col items-center justify-center w-10 h-11 rounded-lg text-xs transition-colors ${day.isToday
-                            ? 'bg-zinc-800 text-white font-bold border border-zinc-700 shadow-sm'
-                            : 'text-zinc-600 hover:bg-zinc-900/50'
+                          ? 'bg-zinc-800 text-white font-bold border border-zinc-700 shadow-sm'
+                          : 'text-zinc-600 hover:bg-zinc-900/50'
                           }`}
                       >
                         <span className="leading-none text-[10px] mb-1">{day.dayStr}/{day.monthStr}</span>
