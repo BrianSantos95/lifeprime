@@ -593,7 +593,7 @@ const App: React.FC = () => {
               </header>
 
               <StatsCards
-                streak={isCurrentMonth ? 12 : 0}
+                streak={0}
                 todayCompleted={isCurrentMonth ? todayCompletedCount : 0}
                 totalHabits={habitDefs.length}
                 successRate={globalSuccessRate}
