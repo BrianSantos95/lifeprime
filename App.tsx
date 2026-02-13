@@ -121,45 +121,109 @@ const App: React.FC = () => {
     });
   };
 
-  const toggleHabit = (habitId: number, dayIndex: number) => {
-    const date = new Date(currentDate);
-    date.setDate(dayIndex + 1); // dayIndex is 0-based, date is 1-based
+  const toggleHabit = async (habitId: number, dayIndex: number) => {
+    if (!session?.user?.id) return;
 
+    const date = new Date(currentDate);
+    date.setDate(dayIndex + 1);
+
+    // Format for DB: YYYY-MM-DD
+    const dateStr = date.toISOString().split('T')[0];
     const key = getDateKey(habitId, date);
-    setCompletionsMap(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+
+    const isCompleted = !!completionsMap[key];
+
+    // Optimistic Update
+    setCompletionsMap(prev => {
+      const newMap = { ...prev };
+      if (isCompleted) {
+        delete newMap[key];
+      } else {
+        newMap[key] = true;
+      }
+      return newMap;
+    });
+
+    try {
+      if (isCompleted) {
+        // Delete completion
+        const { error } = await supabase
+          .from('habit_completions')
+          .delete()
+          .match({ habit_id: habitId, date: dateStr });
+
+        if (error) throw error;
+      } else {
+        // Insert completion
+        const { error } = await supabase
+          .from('habit_completions')
+          .insert({
+            habit_id: habitId,
+            user_id: session.user.id,
+            date: dateStr
+          });
+
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.error('Error toggling habit:', err);
+      // Revert on error
+      setCompletionsMap(prev => ({
+        ...prev,
+        [key]: isCompleted
+      }));
+    }
   };
 
-
-
-  const handleCreateHabit = (e: React.FormEvent) => {
+  const handleCreateHabit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newHabitName.trim()) return;
+    if (!newHabitName.trim() || !session?.user?.id) return;
 
-    const newId = Math.max(...habitDefs.map(h => h.id), 0) + 1;
     const colors = ['text-pink-400', 'text-cyan-400', 'text-lime-400', 'text-rose-400'];
-    const icons = [<Circle size={12} fill="currentColor" />];
+    const icons = ['Circle']; // Store string name for DB
 
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     const randomIcon = icons[0];
-
-    // Default section if none selected
     const sectionToUse = newSectionName.trim() || 'Hábito';
 
-    const newHabit = {
-      id: newId,
-      name: newHabitName,
-      icon: randomIcon,
-      color: randomColor,
-      section: sectionToUse
-    };
+    // Temporary ID for optimistic UI (will be replaced by real ID after fetch, or we update it now)
+    // Actually, best to wait for DB response to get real ID to avoid key mismatches
 
-    setHabitDefs([...habitDefs, newHabit]);
-    setNewHabitName('');
-    setNewSectionName(''); // Reset section name
-    setIsModalOpen(false);
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .insert({
+          user_id: session.user.id,
+          name: newHabitName,
+          icon: randomIcon, // sending string
+          color: randomColor,
+          section: sectionToUse
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // success
+        const newHabit: Habit = {
+          id: data.id,
+          name: data.name,
+          icon: <Circle size={12} fill="currentColor" />, // rendered component
+          color: data.color,
+          section: data.section,
+          completions: [] // init empty
+        };
+
+        setHabitDefs([...habitDefs, newHabit]);
+        setNewHabitName('');
+        setNewSectionName('');
+        setIsModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Error creating habit:', err);
+      alert('Erro ao criar hábito. Tente novamente.');
+    }
   };
 
   const handleHabitClick = (habit: Habit) => {
@@ -186,24 +250,36 @@ const App: React.FC = () => {
     setDeleteConfirmText('');
   };
 
-  const confirmRename = (e: React.FormEvent) => {
+  const confirmRename = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeHabit || !renameText.trim()) return;
 
+    // Optimistic
     setHabitDefs(prev => prev.map(h =>
       h.id === activeHabit.id ? { ...h, name: renameText } : h
     ));
     closeHabitModal();
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({ name: renameText })
+        .eq('id', activeHabit.id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error renaming habit:', err);
+      // Could revert here if needed
+    }
   };
 
-  const confirmDelete = (e: React.FormEvent) => {
+  const confirmDelete = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeHabit || deleteConfirmText.toLowerCase() !== 'excluir') return;
 
-    // Remove habit definition
+    // Optimistic
     setHabitDefs(prev => prev.filter(h => h.id !== activeHabit.id));
-
-    // Cleanup completions (optional but good practice)
+    // Cleanup completions map locally
     setCompletionsMap(prev => {
       const newMap = { ...prev };
       Object.keys(newMap).forEach(key => {
@@ -215,6 +291,18 @@ const App: React.FC = () => {
     });
 
     closeHabitModal();
+
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .delete()
+        .eq('id', activeHabit.id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error deleting habit:', err);
+      alert('Erro ao excluir hábito do banco de dados.');
+    }
   };
 
 
@@ -534,7 +622,10 @@ const App: React.FC = () => {
     return acc + (h.completions[today.getDate() - 1] ? 1 : 0);
   }, 0);
 
-  const globalSuccessRate = Math.round((currentMonthHabits.reduce((acc, h) => acc + h.completions.filter(Boolean).length, 0) / (currentMonthHabits.length * daysInMonth)) * 100);
+  const totalPossible = currentMonthHabits.length * daysInMonth;
+  const globalSuccessRate = totalPossible > 0
+    ? Math.round((currentMonthHabits.reduce((acc, h) => acc + h.completions.filter(Boolean).length, 0) / totalPossible) * 100)
+    : 0;
 
   if (authLoading) {
     return (
