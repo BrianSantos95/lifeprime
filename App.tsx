@@ -40,7 +40,8 @@ import { supabase } from './lib/supabase';
 // ... (other imports remain the same)
 
 // ... imports
-import { useSupabaseData } from './hooks/useSupabaseData';
+// Force update
+import { useSupabaseData } from './hooks/useSupabaseFetch';
 // ...
 
 const App: React.FC = () => {
@@ -90,18 +91,7 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // --- Conditional Returns (Must be after all hooks) ---
-  if (authLoading) {
-    return (
-      <div className="h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <Auth onLoginSuccess={() => { }} />;
-  }
+  // --- Conditional Returns moved to bottom ---
 
   // --- Derived Values ---
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
@@ -544,6 +534,18 @@ const App: React.FC = () => {
   }, 0);
 
   const globalSuccessRate = Math.round((currentMonthHabits.reduce((acc, h) => acc + h.completions.filter(Boolean).length, 0) / (currentMonthHabits.length * daysInMonth)) * 100);
+
+  if (authLoading) {
+    return (
+      <div className="h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Auth onLoginSuccess={() => { }} />;
+  }
 
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-zinc-300 font-sans overflow-hidden">
