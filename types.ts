@@ -47,6 +47,8 @@ export interface RecurringExpense {
   amount?: number; // Fixed amount, or estimated for variable
   dayOfMonth: number;
   lastPaidDate?: Date;
+  installmentsTotal?: number; // Total number of installments (e.g., 12)
+  currentInstallment?: number; // Current installment number (e.g., 1, 2, 3...)
 }
 
 export interface DailyTask {

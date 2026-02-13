@@ -581,7 +581,9 @@ const App: React.FC = () => {
         description: rec.description,
         amount: rec.amount,
         category: rec.category,
-        due_day: rec.dayOfMonth
+        due_day: rec.dayOfMonth,
+        installments_total: rec.installmentsTotal,
+        current_installment: rec.currentInstallment
       }).select().single();
 
       if (error) throw error;
@@ -589,7 +591,9 @@ const App: React.FC = () => {
         setRecurringExpenses(prev => [...prev, {
           ...data,
           dayOfMonth: data.due_day,
-          lastPaidDate: data.last_paid_date ? new Date(data.last_paid_date) : undefined
+          lastPaidDate: data.last_paid_date ? new Date(data.last_paid_date) : undefined,
+          installmentsTotal: data.installments_total,
+          currentInstallment: data.current_installment
         }]);
       }
     } catch (err) { console.error(err); }
@@ -615,13 +619,24 @@ const App: React.FC = () => {
       if (transData) setTransactions(prev => [...prev, { ...transData, date: new Date(transData.date) }]);
 
       // 2. Update Recurring
-      const { error: recError } = await supabase.from('recurring_expenses').update({
-        last_paid_date: date.toISOString()
-      }).eq('id', id);
+      const updates: any = { last_paid_date: date.toISOString() };
+      let newCurrentInstallment = expense.currentInstallment;
+
+      if (expense.installmentsTotal && expense.currentInstallment && expense.currentInstallment < expense.installmentsTotal) {
+        newCurrentInstallment = expense.currentInstallment + 1;
+        updates.current_installment = newCurrentInstallment;
+      }
+
+      const { error: recError } = await supabase.from('recurring_expenses').update(updates).eq('id', id);
 
       if (recError) throw recError;
 
-      setRecurringExpenses(prev => prev.map(r => r.id === id ? { ...r, lastPaidDate: date } : r));
+      setRecurringExpenses(prev => prev.map(r => r.id === id ? {
+        ...r,
+        lastPaidDate: date,
+        currentInstallment: newCurrentInstallment
+      } : r));
+
 
     } catch (err) { console.error(err); }
   };

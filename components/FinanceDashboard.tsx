@@ -71,6 +71,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     const [recurType, setRecurType] = useState<'fixed' | 'variable'>('fixed');
     const [recurAmount, setRecurAmount] = useState('');
     const [recurDay, setRecurDay] = useState('');
+    const [recurInstallments, setRecurInstallments] = useState(''); // New state for installments
 
     const [editBudgetModal, setEditBudgetModal] = useState<{ isOpen: boolean; budgetId: string; currentLimit: string }>({
         isOpen: false,
@@ -224,13 +225,16 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             category: recurCategory,
             type: recurType,
             amount: recurAmount ? parseFloat(recurAmount.replace(',', '.')) : undefined,
-            dayOfMonth: parseInt(recurDay)
+            dayOfMonth: parseInt(recurDay),
+            installmentsTotal: recurInstallments ? parseInt(recurInstallments) : undefined,
+            currentInstallment: recurInstallments ? 1 : undefined
         });
         setRecurDesc('');
         setRecurCategory('');
         setRecurType('fixed');
         setRecurAmount('');
         setRecurDay('');
+        setRecurInstallments(''); // Reset installments state
         setIsRecurringModalOpen(false);
     };
 
@@ -548,6 +552,11 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                                                 <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase ${rec.type === 'fixed' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'}`}>
                                                     {rec.type === 'fixed' ? 'Fixa' : 'Variável'}
                                                 </span>
+                                                {rec.installmentsTotal && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded uppercase bg-zinc-800 text-zinc-400">
+                                                        {rec.currentInstallment || 1}/{rec.installmentsTotal}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="text-xs text-zinc-500 flex gap-2">
                                                 <span>Dia {rec.dayOfMonth}</span>
@@ -921,8 +930,17 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                                             type="number"
                                             value={recurAmount}
                                             onChange={e => setRecurAmount(e.target.value)}
-                                            className="w-full bg-[#1a1a1a] border border-zinc-800 text-white rounded-lg px-4 py-3 focus:border-red-600"
+                                            className="w-full bg-[#1a1a1a] border border-zinc-800 text-white rounded-lg px-4 py-3 focus:border-red-600 mb-4"
                                             placeholder="0,00"
+                                        />
+                                        <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">N° de Parcelas (Opcional)</label>
+                                        <input
+                                            type="number"
+                                            value={recurInstallments}
+                                            onChange={e => setRecurInstallments(e.target.value)}
+                                            className="w-full bg-[#1a1a1a] border border-zinc-800 text-white rounded-lg px-4 py-3 focus:border-red-600"
+                                            placeholder="Ex: 12"
+                                            min="1"
                                         />
                                     </div>
                                 )}
