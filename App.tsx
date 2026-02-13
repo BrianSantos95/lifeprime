@@ -596,7 +596,10 @@ const App: React.FC = () => {
           currentInstallment: data.current_installment
         }]);
       }
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      console.error(err);
+      alert(`Erro ao salvar despesa: ${err.message || 'Erro desconhecido'}`);
+    }
   };
 
   const handlePayRecurring = async (id: string, amount: number, date: Date) => {
