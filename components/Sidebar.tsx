@@ -64,12 +64,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onSignOut }) 
         </button>
       </nav>
       <button
-        onClick={() => onNavigate('settings')}
-        className={getButtonClass('settings')}
-      >
-        <Settings size={22} />
-      </button>
-      <button
         onClick={onSignOut}
         className="p-2 mt-4 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
         title="Sair"

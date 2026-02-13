@@ -748,21 +748,42 @@ const App: React.FC = () => {
               </div>
             )}
             {activePage === 'profile' && (
-              <div className="text-center">
-                <div className="p-4 bg-zinc-900 rounded-full mb-4 inline-block">
-                  <User size={32} className="text-zinc-600" />
+              <div className="w-full max-w-sm mx-auto">
+                <div className="bg-[#111] border border-zinc-800 rounded-2xl p-8 text-center shadow-lg">
+                  <div className="w-20 h-20 bg-zinc-800 rounded-full mx-auto mb-4 flex items-center justify-center text-zinc-500">
+                    <User size={40} />
+                  </div>
+                  <h2 className="text-xl font-bold text-white mb-1">Minha Conta</h2>
+                  <p className="text-zinc-400 text-sm mb-8">{session?.user?.email}</p>
+
+                  <div className="flex flex-col gap-3">
+                    <button className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-3 rounded-lg font-medium transition-all text-sm flex items-center justify-center gap-2">
+                      <Edit2 size={16} />
+                      Editar Perfil
+                    </button>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-3 rounded-lg font-medium transition-all text-sm flex items-center justify-center gap-2"
+                    >
+                      <Trash2 size={16} /> {/* Using Trash as logout icon substitute for variety, or keep LogOut */}
+                      Sair da Conta
+                    </button>
+                  </div>
+
+                  <div className="mt-8 pt-8 border-t border-zinc-900">
+                    <p className="text-xs text-zinc-600 uppercase tracking-widest font-bold">Estatísticas Gerais</p>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="bg-zinc-900/50 p-3 rounded-lg">
+                        <div className="text-2xl font-bold text-white">{habitDefs.length}</div>
+                        <div className="text-xs text-zinc-500">Hábitos Ativos</div>
+                      </div>
+                      <div className="bg-zinc-900/50 p-3 rounded-lg">
+                        <div className="text-2xl font-bold text-green-500">{globalSuccessRate}%</div>
+                        <div className="text-xs text-zinc-500">Taxa de Sucesso</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold text-zinc-300 mb-2">Perfil</h2>
-                <p className="opacity-60">Gerenciamento de perfil em desenvolvimento.</p>
-              </div>
-            )}
-            {activePage === 'settings' && (
-              <div className="text-center">
-                <div className="p-4 bg-zinc-900 rounded-full mb-4 inline-block">
-                  <Activity size={32} className="text-zinc-600" />
-                </div>
-                <h2 className="text-xl font-bold text-zinc-300 mb-2">Configurações</h2>
-                <p className="opacity-60">Ajustes do sistema em desenvolvimento.</p>
               </div>
             )}
           </div>
