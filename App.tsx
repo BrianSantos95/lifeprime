@@ -547,9 +547,14 @@ const App: React.FC = () => {
     return <Auth onLoginSuccess={() => { }} />;
   }
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+  };
+
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-zinc-300 font-sans overflow-hidden">
-      <Sidebar activePage={activePage} onNavigate={setActivePage} />
+      <Sidebar activePage={activePage} onNavigate={setActivePage} onSignOut={handleSignOut} />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         {activePage === 'dashboard' ? (

@@ -6,20 +6,22 @@ import {
   User,
   Activity,
   DollarSign,
-  Bot
+  Bot,
+  LogOut
 } from 'lucide-react';
 
 interface SidebarProps {
   activePage: string;
   onNavigate: (page: string) => void;
+  onSignOut: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onSignOut }) => {
   const getButtonClass = (page: string) => {
     const isActive = activePage === page;
     return `p-2 rounded-lg transition-colors ${isActive
-        ? 'bg-red-500/10 text-red-500'
-        : 'text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800/50'
+      ? 'bg-red-500/10 text-red-500'
+      : 'text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800/50'
       }`;
   };
 
@@ -66,6 +68,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate }) => {
         className={getButtonClass('settings')}
       >
         <Settings size={22} />
+      </button>
+      <button
+        onClick={onSignOut}
+        className="p-2 mt-4 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+        title="Sair"
+      >
+        <LogOut size={22} />
       </button>
     </aside>
   );
