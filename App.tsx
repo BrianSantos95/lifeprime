@@ -650,6 +650,35 @@ const App: React.FC = () => {
     return acc + (h.completions[today.getDate() - 1] ? 1 : 0);
   }, 0);
 
+  const currentStreak = useMemo(() => {
+    let streak = 0;
+    const checkDate = new Date(); // Start from today
+
+    // Check up to 365 days back
+    for (let i = 0; i < 365; i++) {
+      // Check if all habits are completed for this date
+      const allCompleted = habitDefs.length > 0 && habitDefs.every(h => {
+        const key = getDateKey(h.id, checkDate);
+        return completionsMap[key];
+      });
+
+      if (allCompleted) {
+        streak++;
+      } else {
+        // If it's today (i===0) and not complete, we just don't count it yet, 
+        // but we check yesterday to keep the streak from previous days.
+        // If it's a past day and not complete, streak is broken.
+        if (i !== 0) {
+          break;
+        }
+      }
+
+      // Go back one day
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+    return streak;
+  }, [habitDefs, completionsMap]);
+
   const totalPossible = currentMonthHabits.length * daysInMonth;
   const globalSuccessRate = totalPossible > 0
     ? Math.round((currentMonthHabits.reduce((acc, h) => acc + h.completions.filter(Boolean).length, 0) / totalPossible) * 100)
@@ -759,7 +788,7 @@ const App: React.FC = () => {
               </header>
 
               <StatsCards
-                streak={0}
+                streak={currentStreak}
                 todayCompleted={isCurrentMonth ? todayCompletedCount : 0}
                 totalHabits={habitDefs.length}
                 successRate={globalSuccessRate}
