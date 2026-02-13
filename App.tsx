@@ -583,7 +583,8 @@ const App: React.FC = () => {
         category: rec.category,
         due_day: rec.dayOfMonth,
         installments_total: rec.installmentsTotal,
-        current_installment: rec.currentInstallment
+        current_installment: rec.currentInstallment,
+        type: rec.type
       }).select().single();
 
       if (error) throw error;
