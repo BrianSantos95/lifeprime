@@ -677,6 +677,26 @@ const App: React.FC = () => {
     setHabitDefs([...otherHabits, ...newOrderedSectionHabits]);
   };
 
+  // Visual Weekly Calendar Logic
+  const weekOverview = useMemo(() => {
+    const todayObj = new Date();
+    const currentDay = todayObj.getDay(); // 0-6
+    const startOfWeek = new Date(todayObj);
+    startOfWeek.setDate(todayObj.getDate() - currentDay); // Go back to Sunday
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      return {
+        date: d,
+        isToday: d.toDateString() === todayObj.toDateString(),
+        dayStr: d.getDate().toString().padStart(2, '0'),
+        monthStr: (d.getMonth() + 1).toString().padStart(2, '0'),
+        weekDay: d.toLocaleDateString('pt-BR', { weekday: 'short' }).slice(0, 3).replace('.', '')
+      };
+    });
+  }, []);
+
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-zinc-300 font-sans overflow-hidden">
       <Sidebar activePage={activePage} onNavigate={setActivePage} onSignOut={handleSignOut} />
@@ -685,35 +705,54 @@ const App: React.FC = () => {
         {activePage === 'dashboard' ? (
           <>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-24 md:pb-8">
-              <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+              <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4">
                 <div>
                   <h1 className="text-2xl font-bold text-white mb-1">Dashboard de Hábitos</h1>
                   <p className="text-zinc-500 text-sm">
                     Acompanhe sua evolução diária em <span className="text-zinc-300 font-medium capitalize">{currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span>
                   </p>
                 </div>
-                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                  <div className="flex bg-[#1a1a1a] rounded-lg p-1 border border-zinc-900">
+
+                <div className="flex flex-col md:flex-row items-center gap-6 w-full xl:w-auto">
+                  {/* Weekly Visual Calendar */}
+                  <div className="hidden md:flex items-center gap-1.5 bg-[#111] p-1.5 rounded-xl border border-zinc-900 shadow-sm">
+                    {weekOverview.map((day, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex flex-col items-center justify-center w-10 h-11 rounded-lg text-xs transition-colors ${day.isToday
+                            ? 'bg-zinc-800 text-white font-bold border border-zinc-700 shadow-sm'
+                            : 'text-zinc-600 hover:bg-zinc-900/50'
+                          }`}
+                      >
+                        <span className="leading-none text-[10px] mb-1">{day.dayStr}/{day.monthStr}</span>
+                        <span className="uppercase text-[9px] opacity-70 leading-none">{day.weekDay}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                    <div className="flex bg-[#1a1a1a] rounded-lg p-1 border border-zinc-900">
+                      <button
+                        onClick={handlePrevMonth}
+                        className="p-2 hover:bg-[#2a2a2a] rounded-md transition-colors text-zinc-400 hover:text-white"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <button
+                        onClick={handleNextMonth}
+                        className="p-2 hover:bg-[#2a2a2a] rounded-md transition-colors text-zinc-400 hover:text-white"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
                     <button
-                      onClick={handlePrevMonth}
-                      className="p-2 hover:bg-[#2a2a2a] rounded-md transition-colors text-zinc-400 hover:text-white"
+                      onClick={() => setIsModalOpen(true)}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all hover:shadow-[0_0_15px_rgba(220,38,38,0.4)]"
                     >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <button
-                      onClick={handleNextMonth}
-                      className="p-2 hover:bg-[#2a2a2a] rounded-md transition-colors text-zinc-400 hover:text-white"
-                    >
-                      <ChevronRight size={18} />
+                      <Plus size={18} />
+                      <span className="hidden sm:inline">Novo Hábito</span>
                     </button>
                   </div>
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all hover:shadow-[0_0_15px_rgba(220,38,38,0.4)]"
-                  >
-                    <Plus size={18} />
-                    <span className="hidden sm:inline">Novo Hábito</span>
-                  </button>
                 </div>
               </header>
 
