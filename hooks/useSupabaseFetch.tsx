@@ -55,12 +55,15 @@ export const useSupabaseData = (session: any) => {
                 if (compData) {
                     const map: Record<string, boolean> = {};
                     compData.forEach((c: any) => {
-                        const date = new Date(c.completed_date);
-                        // Assuming the date string from DB is YYYY-MM-DD
-                        // Using standard JS date parsing might introduce timezone offsets
-                        // Ideally we parse parts manually or use UTC methods if stored as UTC
-                        // For now, trusting standard Date constructor but using consistent key gen
-                        const key = `${c.habit_id}-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                        // Support both potential column names and avoid UTC conversion issues by splitting string
+                        const dateStr = c.date || c.completed_date;
+                        if (!dateStr) return;
+
+                        const [year, month, day] = dateStr.split('-');
+
+                        // JS Date uses 0-indexed months (0=Jan, 1=Feb)
+                        // DB uses 1-indexed (01=Jan, 02=Feb)
+                        const key = `${c.habit_id}-${parseInt(year)}-${parseInt(month) - 1}-${parseInt(day)}`;
                         map[key] = true;
                     });
                     setCompletions(map);

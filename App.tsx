@@ -165,13 +165,17 @@ const App: React.FC = () => {
 
         if (error) throw error;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error toggling habit:', err);
       // Revert on error
       setCompletionsMap(prev => ({
         ...prev,
         [key]: isCompleted
       }));
+      // Show error to user only if it's not a known safe error
+      if (err.code !== 'PGRST116') { // Ignore empty result errors if any
+        alert(`Erro ao salvar progresso: ${err.message || 'Verifique sua conexão'}`);
+      }
     }
   };
 
