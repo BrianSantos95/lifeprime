@@ -2,17 +2,18 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Habit, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask } from '../types';
-import { Droplets, Book, Activity, Moon, Coffee, Zap, Music, Briefcase } from 'lucide-react';
+import { Circle } from 'lucide-react';
 
 const iconMap: Record<string, any> = {
-    'Droplets': <Droplets size={16} />,
-    'Book': <Book size={16} />,
-    'Activity': <Activity size={16} />,
-    'Moon': <Moon size={16} />,
-    'Coffee': <Coffee size={16} />,
-    'Zap': <Zap size={16} />,
-    'Music': <Music size={16} />,
-    'Briefcase': <Briefcase size={16} />
+    'Droplets': <Circle size={12} fill="currentColor" />,
+    'Book': <Circle size={12} fill="currentColor" />,
+    'Activity': <Circle size={12} fill="currentColor" />,
+    'Moon': <Circle size={12} fill="currentColor" />,
+    'Coffee': <Circle size={12} fill="currentColor" />,
+    'Zap': <Circle size={12} fill="currentColor" />,
+    'Music': <Circle size={12} fill="currentColor" />,
+    'Briefcase': <Circle size={12} fill="currentColor" />,
+    'Circle': <Circle size={12} fill="currentColor" /> // New standard
 };
 
 export const useSupabaseData = (session: any) => {
@@ -43,7 +44,7 @@ export const useSupabaseData = (session: any) => {
                         name: h.name,
                         color: h.color || 'text-white',
                         section: h.section || 'Hábito',
-                        icon: iconMap[h.icon] || <Activity size={16} />,
+                        icon: iconMap[h.icon] || <Circle size={12} fill="currentColor" />,
                         completions: []
                     }));
                     setHabits(formattedHabits);

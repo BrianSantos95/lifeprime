@@ -15,7 +15,8 @@ import {
   Edit2,
   Trash2,
   Briefcase,
-  Calendar
+  Calendar,
+  Circle
 } from 'lucide-react';
 
 import Sidebar from './components/Sidebar';
@@ -139,10 +140,10 @@ const App: React.FC = () => {
 
     const newId = Math.max(...habitDefs.map(h => h.id), 0) + 1;
     const colors = ['text-pink-400', 'text-cyan-400', 'text-lime-400', 'text-rose-400'];
-    const icons = [<Zap size={16} />, <Music size={16} />, <Briefcase size={16} />, <Activity size={16} />];
+    const icons = [<Circle size={12} fill="currentColor" />];
 
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const randomIcon = icons[Math.floor(Math.random() * icons.length)];
+    const randomIcon = icons[0];
 
     // Default section if none selected
     const sectionToUse = newSectionName.trim() || 'Hábito';
@@ -552,6 +553,31 @@ const App: React.FC = () => {
     setSession(null);
   };
 
+  // --- Reorder Logic ---
+  const handleReorderHabits = (newOrderedSectionHabits: Habit[]) => {
+    if (newOrderedSectionHabits.length === 0) return;
+
+    const sectionName = newOrderedSectionHabits[0].section;
+
+    // We want to keep the habits of other sections, and replace the habits of this section 
+    // with the new order.
+
+    // Filter out habits from the modified section
+    const otherHabits = habitDefs.filter(h => h.section !== sectionName);
+
+    // Combine (Note: This might move the section to the end of the data array, 
+    // but the UI typically groups by name so section order assumes discovery order or alphabetical. 
+    // Since we use Object.entries, it is often creation order.
+    // Ideally we would splice them back in place, but this is complex without known blocks.)
+
+    // To preserve section order better, let's try to reconstruct the array:
+    // This is a simplistic approach: Rebuild the whole array based on the `sections` derived state 
+    // (which we don't have inside this function easily without recalc). 
+
+    // Simple approach for now:
+    setHabitDefs([...otherHabits, ...newOrderedSectionHabits]);
+  };
+
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-zinc-300 font-sans overflow-hidden">
       <Sidebar activePage={activePage} onNavigate={setActivePage} onSignOut={handleSignOut} />
@@ -624,6 +650,7 @@ const App: React.FC = () => {
                     today={currentDayHighlight}
                     onToggle={toggleHabit}
                     onHabitAction={handleHabitClick}
+                    onReorder={handleReorderHabits}
                     sectionTitle={sectionTitle}
                   />
                 ))}
