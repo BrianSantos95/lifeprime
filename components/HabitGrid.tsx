@@ -37,6 +37,7 @@ const SortableHabitRow = ({
   onToggle,
   onHabitAction
 }: {
+  key?: React.Key;
   habit: Habit;
   dayLabels: number[];
   today: number;

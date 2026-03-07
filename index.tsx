@@ -10,8 +10,15 @@ interface ErrorBoundaryState {
   error: unknown;
 }
 
-class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false, error: null };
+class ErrorBoundary extends React.Component<React.PropsWithChildren<object>, ErrorBoundaryState> {
+  // Necessário com target ES2022: re-declarar fields herdados explicitamente
+  declare state: ErrorBoundaryState;
+  declare props: React.PropsWithChildren<object>;
+
+  constructor(props: React.PropsWithChildren<object>) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
   static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
     return { hasError: true, error };
@@ -37,8 +44,6 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
     return this.props.children;
   }
 }
-
-
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");

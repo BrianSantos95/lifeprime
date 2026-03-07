@@ -37,6 +37,7 @@ const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sáb
 
 // --- Sortable Task Item ---
 interface TaskItemProps {
+    key?: React.Key;
     task: DailyTask;
     onDelete: (id: string) => void;
     onToggle: (id: string) => void;
@@ -98,6 +99,7 @@ const TaskItem = ({ task, onDelete, onToggle }: TaskItemProps) => {
 
 // --- Column Component ---
 interface KanbanColumnProps {
+    key?: React.Key;
     day: string;
     tasks: DailyTask[];
     onAddTask: (day: string, text: string) => void;
