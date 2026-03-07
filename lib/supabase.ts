@@ -1,18 +1,13 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Substitua estas variáveis pelas suas chaves reais do Supabase
-// Você as encontra em Project Settings > API no painel do Supabase
+// Chaves carregadas das variáveis de ambiente (definidas em .env.local)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-console.log("Supabase Init:", {
-    url: supabaseUrl ? "Present" : "MISSING",
-    key: supabaseAnonKey ? "Present" : "MISSING"
-});
-
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("Supabase Environment Variables are MISSING! Check .env.local");
+// Aviso de configuração apenas em desenvolvimento (não expõe nada em produção)
+if (import.meta.env.DEV && (!supabaseUrl || !supabaseAnonKey)) {
+    console.error('[HabitPulse] Variáveis de ambiente do Supabase ausentes! Verifique o arquivo .env.local');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

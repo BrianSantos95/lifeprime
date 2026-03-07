@@ -17,7 +17,6 @@ const iconMap: Record<string, any> = {
 };
 
 export const useSupabaseData = (session: any) => {
-    console.log("useSupabaseData HOOK CALLED. Session:", session);
     const [loading, setLoading] = useState(true);
     const [habits, setHabits] = useState<Habit[]>([]);
     const [completions, setCompletions] = useState<Record<string, boolean>>({});
@@ -37,7 +36,7 @@ export const useSupabaseData = (session: any) => {
             setLoading(true);
             try {
                 // 1. Habits
-                const { data: habitsData } = await supabase.from('habits').select('*');
+                const { data: habitsData } = await supabase.from('habits').select('*').order('created_at', { ascending: true });
                 if (habitsData) {
                     const formattedHabits = habitsData.map((h: any) => ({
                         id: h.id,
@@ -51,7 +50,7 @@ export const useSupabaseData = (session: any) => {
                 }
 
                 // 2. Completions
-                const { data: compData } = await supabase.from('habit_completions').select('*');
+                const { data: compData } = await supabase.from('habit_completions').select('*').order('completed_date', { ascending: false });
                 if (compData) {
                     const map: Record<string, boolean> = {};
                     compData.forEach((c: any) => {
@@ -69,8 +68,8 @@ export const useSupabaseData = (session: any) => {
                     setCompletions(map);
                 }
 
-                // 3. Transactions
-                const { data: transData } = await supabase.from('transactions').select('*');
+                // 3. Transactions (ordenadas da mais recente para mais antiga)
+                const { data: transData } = await supabase.from('transactions').select('*').order('date', { ascending: false });
                 if (transData) {
                     const formatted = transData.map((t: any) => ({
                         ...t,
@@ -80,15 +79,15 @@ export const useSupabaseData = (session: any) => {
                 }
 
                 // 4. Goals
-                const { data: goalsData } = await supabase.from('financial_goals').select('*');
+                const { data: goalsData } = await supabase.from('financial_goals').select('*').order('created_at', { ascending: true });
                 if (goalsData) setGoals(goalsData);
 
                 // 5. Budgets
-                const { data: budgetsData } = await supabase.from('budgets').select('*');
+                const { data: budgetsData } = await supabase.from('budgets').select('*').order('created_at', { ascending: true });
                 if (budgetsData) setBudgets(budgetsData);
 
                 // 6. Recurring
-                const { data: recData } = await supabase.from('recurring_expenses').select('*');
+                const { data: recData } = await supabase.from('recurring_expenses').select('*').order('due_day', { ascending: true });
                 if (recData) {
                     const formatted = recData.map((r: any) => ({
                         ...r,
@@ -98,7 +97,7 @@ export const useSupabaseData = (session: any) => {
                 }
 
                 // 7. Tasks
-                const { data: tasksData } = await supabase.from('daily_tasks').select('*');
+                const { data: tasksData } = await supabase.from('daily_tasks').select('*').order('created_at', { ascending: true });
                 if (tasksData) setTasks(tasksData);
 
             } catch (error) {

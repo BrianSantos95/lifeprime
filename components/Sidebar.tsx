@@ -54,7 +54,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onSignOut }) 
         <button
           onClick={() => onNavigate('calendar')}
           className={getButtonClass('calendar')}
+          title="Calendário"
         >
+          <Calendar size={24} />
         </button>
         <button
           onClick={() => onNavigate('profile')}

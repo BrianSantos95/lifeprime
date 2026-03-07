@@ -484,13 +484,19 @@ const App: React.FC = () => {
   const handleAddTransactionManual = async (data: Omit<Transaction, 'id' | 'date'> & { date: Date, goalId?: string, goalContribution?: number }) => {
     if (!session?.user?.id) return;
 
+    // BUG FIX #2: Desestruturar para remover goalId e goalContribution antes do insert
+    // (essas colunas não existem na tabela 'transactions')
+    const { goalId, goalContribution, ...transactionData } = data;
+
     try {
-      // 1. Insert Transaction
+      // 1. Insert Transaction (apenas campos válidos da tabela)
       const { data: transData, error: transError } = await supabase.from('transactions').insert({
         user_id: session.user.id,
-        ...data,
-        date: data.date.toISOString(), // Assuming ISO string for DB
-        // goalId and goalContribution are not valid DB columns in 'transactions', filtered by passing specific object above
+        type: transactionData.type,
+        amount: transactionData.amount,
+        category: transactionData.category,
+        description: transactionData.description,
+        date: transactionData.date.toISOString(),
       }).select().single();
 
       if (transError) throw transError;
@@ -499,9 +505,9 @@ const App: React.FC = () => {
       }
 
       // 2. Update Goal if needed
-      if (data.goalId && data.type === 'income') {
-        const contribution = data.goalContribution !== undefined ? data.goalContribution : data.amount;
-        await handleUpdateGoal(data.goalId, contribution);
+      if (goalId && data.type === 'income') {
+        const contribution = goalContribution !== undefined ? goalContribution : data.amount;
+        await handleUpdateGoal(goalId, contribution);
       }
     } catch (err) {
       console.error('Error adding manual transaction:', err);
@@ -511,20 +517,17 @@ const App: React.FC = () => {
   const handleAddGoal = async (data: Omit<FinancialGoal, 'id' | 'currentAmount'>) => {
     if (!session?.user?.id) return;
     try {
-      // Map properties. 'icon' is ReactNode, we might need to store string name or serialize?
-      // Supabase can't modify React components.
-      // Usually we store icon name string.
-      // Assuming 'icon' in data is ReactNode... wait.
-      // The current app logic likely passes a component. That won't save to DB.
-      // But let's assume valid JSON or string for now to avoid breaking type system too hard.
-      // Ideally 'icon' column is text.
+      // BUG FIX #3: Salvar o ícone como string no banco.
+      // ReactNodes não podem ser persistidos — extraímos o nome da string
+      // se vier como string, ou salvamos um default.
+      const iconName = typeof data.icon === 'string' ? data.icon : 'Star';
 
       const { data: goalData, error } = await supabase.from('financial_goals').insert({
         user_id: session.user.id,
         name: data.name,
         target_amount: data.targetAmount,
-        deadline: data.deadline,
-        // icon: data.icon, // Probably skip saving icon if it's a component
+        deadline: data.deadline ? (data.deadline instanceof Date ? data.deadline.toISOString() : data.deadline) : null,
+        icon: iconName,
         color: data.color,
         current_amount: 0
       }).select().single();
@@ -536,8 +539,8 @@ const App: React.FC = () => {
           name: goalData.name,
           targetAmount: goalData.target_amount,
           currentAmount: goalData.current_amount,
-          deadline: goalData.deadline,
-          icon: goalData.icon, // Whatever came back (null?)
+          deadline: goalData.deadline ? new Date(goalData.deadline) : undefined,
+          icon: goalData.icon || 'Star', // Retorna a string salva
           color: goalData.color
         };
         setFinancialGoals(prev => [...prev, newGoal]);
@@ -655,8 +658,15 @@ const App: React.FC = () => {
   const handleEditTransaction = async (id: string, updatedTransaction: Partial<Transaction>) => {
     setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updatedTransaction } : t));
     try {
-      await supabase.from('transactions').update(updatedTransaction).eq('id', id);
-    } catch (err) { console.error(err); }
+      // BUG FIX #1: Serializar o campo `date` para string ISO antes de enviar ao Supabase.
+      // Passar um objeto Date diretamente causaria dados corrompidos no banco.
+      const payload: Record<string, any> = { ...updatedTransaction };
+      if (payload.date instanceof Date) {
+        payload.date = payload.date.toISOString();
+      }
+      const { error } = await supabase.from('transactions').update(payload).eq('id', id);
+      if (error) throw error;
+    } catch (err) { console.error('Error editing transaction:', err); }
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -700,7 +710,9 @@ const App: React.FC = () => {
         currentInstallment: newCurrentInstallment
       } : r));
 
-      alert('O pagamento foi revertido nas despesas fixas.\n\nIMPORTANTE: Verifique se existe uma transação duplicada no Extrato e exclua-a se necessário.');
+      // BUG FIX #4: Substituído alert() bloqueante por mensagem no console.
+      // O aviso ao usuário deve ser implementado com um toast/snackbar na UI.
+      console.warn('[HabitPulse] Pagamento revertido. Verifique se existe uma transação duplicada no Extrato e exclua-a se necessário.');
 
       try {
         const { error } = await supabase.from('recurring_expenses').update(updates).eq('id', id);
