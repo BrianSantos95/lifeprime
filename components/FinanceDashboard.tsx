@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid, Legend } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Plus, Minus, ChevronLeft, ChevronRight, Target, X, PiggyBank, Calendar, Coins, Edit2, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Plus, Minus, ChevronLeft, ChevronRight, Target, X, PiggyBank, Calendar, Coins, Edit2, Trash2, Clock3 } from 'lucide-react';
 import { Transaction, FinancialGoal, Budget, RecurringExpense } from '../types';
 
 interface FinanceDashboardProps {
@@ -22,6 +22,44 @@ interface FinanceDashboardProps {
     onDeleteTransaction: (id: string) => void;
     onDeleteRecurring: (id: string) => void;
 }
+
+const getDateForDueDay = (year: number, month: number, dueDay: number) => {
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    return new Date(year, month, Math.min(Math.max(dueDay, 1), lastDayOfMonth));
+};
+
+const getNextDueInfo = (dueDay: number, lastPaidDate?: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const paidThisMonth = lastPaidDate
+        && lastPaidDate.getMonth() === today.getMonth()
+        && lastPaidDate.getFullYear() === today.getFullYear();
+
+    let dueDate = getDateForDueDay(today.getFullYear(), today.getMonth(), dueDay);
+    if (paidThisMonth || dueDate < today) {
+        dueDate = getDateForDueDay(today.getFullYear(), today.getMonth() + 1, dueDay);
+    }
+
+    const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    const dueUtc = Date.UTC(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+    const daysRemaining = Math.round((dueUtc - todayUtc) / 86_400_000);
+
+    const countdown = daysRemaining === 0
+        ? 'Vence hoje'
+        : daysRemaining === 1
+            ? 'Vence amanhã'
+            : `Faltam ${daysRemaining} dias`;
+
+    return {
+        countdown,
+        formattedDate: dueDate.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        }).replace('.', '')
+    };
+};
 
 const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     transactions,
@@ -545,10 +583,11 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                                 const isPaid = rec.lastPaidDate &&
                                     rec.lastPaidDate.getMonth() === currentDate.getMonth() &&
                                     rec.lastPaidDate.getFullYear() === currentDate.getFullYear();
+                                const nextDue = getNextDueInfo(rec.dayOfMonth, rec.lastPaidDate);
 
                                 return (
-                                    <div key={rec.id} className="bg-[#1a1a1a] p-3 rounded-lg border border-zinc-900 flex justify-between items-center group">
-                                        <div>
+                                    <div key={rec.id} className="bg-[#1a1a1a] p-3 rounded-lg border border-zinc-900 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 group hover:border-red-900/30 transition-colors">
+                                        <div className="min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-white font-medium">{rec.description}</span>
                                                 <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase ${rec.type === 'fixed' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'}`}>
@@ -560,13 +599,20 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-xs text-zinc-500 flex gap-2">
-                                                <span>Dia {rec.dayOfMonth}</span>
+                                            <div className="text-xs text-zinc-500 flex flex-wrap items-center gap-2 mt-1">
+                                                <span className="inline-flex items-center gap-1 text-zinc-400">
+                                                    <Calendar size={11} className="text-red-400" />
+                                                    {nextDue.formattedDate}
+                                                </span>
                                                 <span>•</span>
                                                 <span>{rec.category}</span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center justify-between sm:justify-end gap-3">
+                                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-red-300 bg-red-500/5 border border-red-500/10 rounded-md px-2 py-1 whitespace-nowrap">
+                                                <Clock3 size={12} />
+                                                {nextDue.countdown}
+                                            </div>
                                             {rec.amount && <span className="text-sm font-bold text-zinc-300">R$ {rec.amount}</span>}
                                             {isPaid ? (
                                                 <button
