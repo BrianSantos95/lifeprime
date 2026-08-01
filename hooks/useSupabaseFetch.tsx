@@ -91,7 +91,10 @@ export const useSupabaseData = (session: any) => {
                 if (recData) {
                     const formatted = recData.map((r: any) => ({
                         ...r,
-                        lastPaidDate: r.last_paid_date ? new Date(r.last_paid_date) : undefined
+                        dayOfMonth: r.due_day,
+                        lastPaidDate: r.last_paid_date ? new Date(r.last_paid_date) : undefined,
+                        installmentsTotal: r.installments_total,
+                        currentInstallment: r.current_installment
                     }));
                     setRecurring(formatted);
                 }

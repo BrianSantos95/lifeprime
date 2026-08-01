@@ -15,6 +15,7 @@ interface FinanceDashboardProps {
     onUpdateGoal: (goalId: string, amountDelta: number) => void;
     onAddBudget: (budget: Omit<Budget, 'id'>) => void;
     onAddRecurring: (rec: Omit<RecurringExpense, 'id'>) => void;
+    onEditRecurring: (id: string, rec: Omit<RecurringExpense, 'id' | 'lastPaidDate'>) => void;
     onPayRecurring: (id: string, amount: number, date: Date) => void;
     onEditBudget: (id: string, newLimit: number) => void;
     onToggleRecurringPay: (id: string, isPaid: boolean, amount?: number, date?: Date) => void;
@@ -29,6 +30,9 @@ const getDateForDueDay = (year: number, month: number, dueDay: number) => {
 };
 
 const getNextDueInfo = (dueDay: number, lastPaidDate?: Date) => {
+    if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) {
+        return { countdown: 'Defina o vencimento', formattedDate: 'Data não definida' };
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -73,6 +77,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     onUpdateGoal,
     onAddBudget,
     onAddRecurring,
+    onEditRecurring,
     onPayRecurring,
     onEditBudget,
     onToggleRecurringPay,
@@ -112,6 +117,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     const [recurAmount, setRecurAmount] = useState('');
     const [recurDay, setRecurDay] = useState('');
     const [recurInstallments, setRecurInstallments] = useState(''); // New state for installments
+    const [editingRecurringId, setEditingRecurringId] = useState<string | null>(null);
 
     const [editBudgetModal, setEditBudgetModal] = useState<{ isOpen: boolean; budgetId: string; currentLimit: string }>({
         isOpen: false,
@@ -260,7 +266,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     const handleSubmitRecurring = (e: React.FormEvent) => {
         e.preventDefault();
         if (!recurDesc || !recurCategory || !recurDay) return;
-        onAddRecurring({
+        const recurringData = {
             description: recurDesc,
             category: recurCategory,
             type: recurType,
@@ -268,14 +274,48 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             dayOfMonth: parseInt(recurDay),
             installmentsTotal: recurInstallments ? parseInt(recurInstallments) : undefined,
             currentInstallment: recurInstallments ? 1 : undefined
-        });
+        };
+        if (editingRecurringId) {
+            const currentExpense = recurringExpenses.find(rec => rec.id === editingRecurringId);
+            onEditRecurring(editingRecurringId, {
+                ...recurringData,
+                currentInstallment: recurringData.installmentsTotal
+                    ? currentExpense?.currentInstallment || 1
+                    : undefined
+            });
+        } else {
+            onAddRecurring(recurringData);
+        }
         setRecurDesc('');
         setRecurCategory('');
         setRecurType('fixed');
         setRecurAmount('');
         setRecurDay('');
         setRecurInstallments(''); // Reset installments state
+        setEditingRecurringId(null);
         setIsRecurringModalOpen(false);
+    };
+
+    const openNewRecurringModal = () => {
+        setEditingRecurringId(null);
+        setRecurDesc('');
+        setRecurCategory('');
+        setRecurType('fixed');
+        setRecurAmount('');
+        setRecurDay('');
+        setRecurInstallments('');
+        setIsRecurringModalOpen(true);
+    };
+
+    const openEditRecurringModal = (rec: RecurringExpense) => {
+        setEditingRecurringId(rec.id);
+        setRecurDesc(rec.description);
+        setRecurCategory(rec.category);
+        setRecurType(rec.type);
+        setRecurAmount(rec.amount?.toString() || '');
+        setRecurDay(Number.isInteger(rec.dayOfMonth) ? rec.dayOfMonth.toString() : '');
+        setRecurInstallments(rec.installmentsTotal?.toString() || '');
+        setIsRecurringModalOpen(true);
     };
 
     const openTransModal = (type: 'income' | 'expense') => {
@@ -569,7 +609,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
                             <Calendar size={20} className="text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.35)]" /> Despesas Fixas
                         </h3>
-                        <button onClick={() => setIsRecurringModalOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
+                        <button onClick={openNewRecurringModal} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
                             <Plus size={18} />
                         </button>
                     </div>
@@ -631,6 +671,13 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                                                     Pagar
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={() => openEditRecurringModal(rec)}
+                                                className="p-1.5 hover:bg-red-500/10 rounded text-zinc-600 hover:text-red-400 transition-colors"
+                                                title="Editar despesa"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
                                             <button
                                                 onClick={() => onDeleteRecurring(rec.id)}
                                                 className="p-1.5 hover:bg-red-500/10 rounded text-zinc-600 hover:text-red-500 transition-colors"

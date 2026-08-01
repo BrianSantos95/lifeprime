@@ -707,6 +707,30 @@ const App: React.FC = () => {
     } catch (err) { console.error(err); }
   };
 
+  const handleEditRecurring = async (
+    id: string,
+    rec: Omit<RecurringExpense, 'id' | 'lastPaidDate'>
+  ) => {
+    const previousExpenses = recurringExpenses;
+    setRecurringExpenses(prev => prev.map(expense => expense.id === id ? { ...expense, ...rec } : expense));
+
+    const { error } = await supabase.from('recurring_expenses').update({
+      description: rec.description,
+      category: rec.category,
+      type: rec.type,
+      amount: rec.amount ?? null,
+      due_day: rec.dayOfMonth,
+      installments_total: rec.installmentsTotal ?? null,
+      current_installment: rec.currentInstallment ?? null
+    }).eq('id', id);
+
+    if (error) {
+      console.error('Error editing recurring expense:', error);
+      setRecurringExpenses(previousExpenses);
+      alert('Não foi possível editar a despesa.');
+    }
+  };
+
   const handleEditBudget = async (id: string, newLimit: number) => {
     setBudgets(prev => prev.map(b => b.id === id ? { ...b, limit: newLimit } : b));
     try {
@@ -1110,6 +1134,7 @@ const App: React.FC = () => {
               onUpdateGoal={handleUpdateGoal}
               onAddBudget={handleAddBudget}
               onAddRecurring={handleAddRecurring}
+              onEditRecurring={handleEditRecurring}
               onPayRecurring={handlePayRecurring}
               onEditBudget={handleEditBudget}
               onDeleteRecurring={handleDeleteRecurring}
