@@ -470,8 +470,9 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="contents">
                 {/* Main Chart */}
-                <div className="lg:col-span-2 bg-[#111111] border border-zinc-800 rounded-2xl p-6">
+                <div className="lg:col-span-2 lg:order-1 bg-[#111111] border border-zinc-800 rounded-2xl p-6">
                     <h3 className="text-lg font-bold text-white mb-6">Fluxo de Caixa ({currentDate.toLocaleString('pt-BR', { month: 'long' })})</h3>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -493,7 +494,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 </div>
 
                 {/* Goals Section */}
-                <div className="bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
+                <div className="lg:col-span-2 lg:order-4 bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-white">Metas Financeiras</h3>
                         <button onClick={() => setIsGoalModalOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
@@ -551,9 +552,9 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             </div>
 
             {/* Budgets and Recurring Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="contents">
                 {/* Spending Goals (Budgets) */}
-                <div className="bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
+                <div className="lg:order-3 bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
                             <Coins size={20} className="text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.35)]" /> Metas de Gastos
@@ -604,7 +605,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 </div>
 
                 {/* Recurring Expenses */}
-                <div className="bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
+                <div className="lg:order-2 bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
                             <Calendar size={20} className="text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.35)]" /> Despesas Fixas
@@ -692,6 +693,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                         )}
                     </div>
                 </div>
+            </div>
             </div>
 
             {/* Transaction List */}
