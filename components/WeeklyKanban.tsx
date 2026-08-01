@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, X, GripVertical } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, X, GripVertical, Pencil, Check } from 'lucide-react';
 import {
     DndContext,
     closestCorners,
@@ -11,12 +11,10 @@ import {
     DragOverlay,
     defaultDropAnimationSideEffects,
     DragStartEvent,
-    DragOverEvent,
     DragEndEvent,
     useDroppable,
 } from '@dnd-kit/core';
 import {
-    arrayMove,
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
@@ -30,7 +28,8 @@ interface WeeklyKanbanProps {
     onAddTask: (day: string, text: string) => void;
     onDeleteTask: (taskId: string) => void;
     onToggleTask: (taskId: string) => void;
-    onMoveTask: (taskId: string, newDay: string) => void;
+    onMoveTask: (taskId: string, newDay: string, newIndex: number) => void;
+    onEditTask: (taskId: string, text: string) => void;
 }
 
 const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -41,9 +40,12 @@ interface TaskItemProps {
     task: DailyTask;
     onDelete: (id: string) => void;
     onToggle: (id: string) => void;
+    onEdit: (id: string, text: string) => void;
 }
 
-const TaskItem = ({ task, onDelete, onToggle }: TaskItemProps) => {
+const TaskItem = ({ task, onDelete, onToggle, onEdit }: TaskItemProps) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [text, setText] = useState(task.text);
     const {
         attributes,
         listeners,
@@ -57,6 +59,13 @@ const TaskItem = ({ task, onDelete, onToggle }: TaskItemProps) => {
         transform: CSS.Translate.toString(transform),
         transition,
         opacity: isDragging ? 0.3 : 1,
+    };
+
+    const saveEdit = () => {
+        const trimmedText = text.trim();
+        if (trimmedText && trimmedText !== task.text) onEdit(task.id, trimmedText);
+        if (!trimmedText) setText(task.text);
+        setIsEditing(false);
     };
 
     return (
@@ -80,19 +89,46 @@ const TaskItem = ({ task, onDelete, onToggle }: TaskItemProps) => {
                     {task.completed ? <CheckCircle2 size={16} /> : <Circle size={16} />}
                 </button>
                 <div className="flex-1 min-w-0">
-                    <span className={`text-sm leading-snug break-words whitespace-pre-wrap ${task.completed ? 'text-zinc-600 line-through' : 'text-zinc-300'}`}>
-                        {task.text}
-                    </span>
+                    {isEditing ? (
+                        <input
+                            autoFocus
+                            value={text}
+                            onChange={(event) => setText(event.target.value)}
+                            onBlur={saveEdit}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter') saveEdit();
+                                if (event.key === 'Escape') {
+                                    setText(task.text);
+                                    setIsEditing(false);
+                                }
+                            }}
+                            className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-red-500"
+                        />
+                    ) : (
+                        <span className={`text-sm leading-snug break-words whitespace-pre-wrap ${task.completed ? 'text-zinc-600 line-through' : 'text-zinc-300'}`}>
+                            {task.text}
+                        </span>
+                    )}
                 </div>
 
             </div>
-            <button
-                onClick={() => onDelete(task.id)}
-                className="opacity-0 group-hover:opacity-100 p-1 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded transition-all flex-shrink-0"
-                title="Excluir"
-            >
-                <Trash2 size={14} />
-            </button>
+            <div className="flex flex-shrink-0">
+                <button
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => isEditing ? saveEdit() : setIsEditing(true)}
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-all"
+                    title={isEditing ? 'Salvar' : 'Editar'}
+                >
+                    {isEditing ? <Check size={14} /> : <Pencil size={14} />}
+                </button>
+                <button
+                    onClick={() => onDelete(task.id)}
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
+                    title="Excluir"
+                >
+                    <Trash2 size={14} />
+                </button>
+            </div>
         </div>
     );
 };
@@ -105,9 +141,10 @@ interface KanbanColumnProps {
     onAddTask: (day: string, text: string) => void;
     onDeleteTask: (id: string) => void;
     onToggleTask: (id: string) => void;
+    onEditTask: (id: string, text: string) => void;
 }
 
-const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask }: KanbanColumnProps) => {
+const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask, onEditTask }: KanbanColumnProps) => {
     const [isAdding, setIsAdding] = useState(false);
     const [newTaskText, setNewTaskText] = useState('');
 
@@ -158,6 +195,7 @@ const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask }: Kan
                             task={task}
                             onDelete={onDeleteTask}
                             onToggle={onToggleTask}
+                            onEdit={onEditTask}
                         />
                     ))}
                 </SortableContext>
@@ -202,7 +240,7 @@ const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask }: Kan
     );
 };
 
-const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteTask, onToggleTask, onMoveTask }) => {
+const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteTask, onToggleTask, onMoveTask, onEditTask }) => {
     const [activeId, setActiveId] = useState<string | null>(null);
 
     const sensors = useSensors(
@@ -235,20 +273,17 @@ const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteT
         const activeTask = tasks.find(t => t.id === active.id);
         if (!activeTask) return;
 
-        // Check if dropped over a column (Day)
         if (DAYS.includes(over.id as string)) {
-            if (activeTask.day !== over.id) {
-                onMoveTask(activeTask.id, over.id as string);
-            }
+            const targetDay = over.id as string;
+            const targetIndex = tasks.filter(task => task.day === targetDay && task.id !== activeTask.id).length;
+            onMoveTask(activeTask.id, targetDay, targetIndex);
         } else {
-            // Dropped over another task
             const overTask = tasks.find(t => t.id === over.id);
-            if (overTask && overTask.day !== activeTask.day) {
-                onMoveTask(activeTask.id, overTask.day);
+            if (overTask) {
+                const targetTasks = tasks.filter(task => task.day === overTask.day);
+                const targetIndex = targetTasks.findIndex(task => task.id === overTask.id);
+                onMoveTask(activeTask.id, overTask.day, targetIndex);
             }
-            // If same day, we could reorder, but for now we just support moving between days via drag.
-            // Reordering within day would require an 'order' field in DailyTask.
-            // The user request specified "mover uma tarefa para outro dia" (move a task to another day).
         }
     };
 
@@ -271,6 +306,7 @@ const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteT
                             onAddTask={onAddTask}
                             onDeleteTask={onDeleteTask}
                             onToggleTask={onToggleTask}
+                            onEditTask={onEditTask}
                         />
                     ))}
                 </div>

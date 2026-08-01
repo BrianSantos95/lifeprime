@@ -56,4 +56,5 @@ export interface DailyTask {
   day: string; // 'Segunda', 'Terça', ...
   text: string;
   completed: boolean;
+  position: number;
 }

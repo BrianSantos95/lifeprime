@@ -97,8 +97,47 @@ export const useSupabaseData = (session: any) => {
                 }
 
                 // 7. Tasks
-                const { data: tasksData } = await supabase.from('daily_tasks').select('*').order('created_at', { ascending: true });
-                if (tasksData) setTasks(tasksData);
+                let { data: tasksData, error: tasksError } = await supabase
+                    .from('daily_tasks')
+                    .select('*')
+                    .order('position', { ascending: true })
+                    .order('created_at', { ascending: true });
+
+                // Bancos criados antes da ordenação ainda não possuem `position`.
+                // Nesse caso, mantém as tarefas visíveis na ordem de criação.
+                const isLegacyTaskSchema = tasksError?.code === '42703' || tasksError?.message?.includes('position');
+                if (isLegacyTaskSchema) {
+                    const fallback = await supabase
+                        .from('daily_tasks')
+                        .select('*')
+                        .order('created_at', { ascending: true });
+                    tasksData = fallback.data;
+                    tasksError = fallback.error;
+                }
+
+                if (tasksError) throw tasksError;
+                if (tasksData) {
+                    const positionsByDay: Record<string, number> = {};
+                    let savedOrder: Record<string, { day: string; position: number }> = {};
+                    if (isLegacyTaskSchema) {
+                        try {
+                            savedOrder = JSON.parse(localStorage.getItem(`habitpulse-task-order-${session.user.id}`) || '{}');
+                        } catch {
+                            savedOrder = {};
+                        }
+                    }
+
+                    const formattedTasks = tasksData.map(task => {
+                        const fallbackPosition = positionsByDay[task.day] ?? 0;
+                        positionsByDay[task.day] = fallbackPosition + 1;
+                        return {
+                            ...task,
+                            day: savedOrder[task.id]?.day ?? task.day,
+                            position: savedOrder[task.id]?.position ?? task.position ?? fallbackPosition
+                        };
+                    });
+                    setTasks(formattedTasks.sort((a, b) => a.position - b.position));
+                }
 
             } catch (error) {
                 console.error('Error fetching data:', error);

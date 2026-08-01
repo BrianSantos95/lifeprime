@@ -49,8 +49,11 @@ create table if not exists daily_tasks (
   day text not null, -- 'Segunda', 'Terça', etc.
   text text not null,
   completed boolean default false,
+  position integer not null default 0,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table daily_tasks add column if not exists position integer not null default 0;
 alter table daily_tasks enable row level security;
 create policy "Users can view own tasks" on daily_tasks for select using (auth.uid() = user_id);
 create policy "Users can create own tasks" on daily_tasks for insert with check (auth.uid() = user_id);

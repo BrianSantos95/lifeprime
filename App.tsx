@@ -339,12 +339,25 @@ const App: React.FC = () => {
   const handleAddDailyTask = async (day: string, text: string) => {
     if (!session?.user?.id) return;
     try {
-      const { data, error } = await supabase.from('daily_tasks').insert({
+      const taskPosition = dailyTasks.filter(task => task.day === day).length;
+      let { data, error } = await supabase.from('daily_tasks').insert({
         user_id: session.user.id,
         day,
         text,
-        completed: false
+        completed: false,
+        position: taskPosition
       }).select().single();
+
+      if (error?.code === '42703' || error?.message?.includes('position')) {
+        const fallback = await supabase.from('daily_tasks').insert({
+          user_id: session.user.id,
+          day,
+          text,
+          completed: false
+        }).select().single();
+        data = fallback.data ? { ...fallback.data, position: taskPosition } : null;
+        error = fallback.error;
+      }
 
       if (error) throw error;
       if (data) setDailyTasks(prev => [...prev, data]);
@@ -382,19 +395,65 @@ const App: React.FC = () => {
     }
   };
 
-  const handleMoveDailyTask = async (taskId: string, newDay: string) => {
-    setDailyTasks(prev => prev.map(t =>
-      t.id === taskId ? { ...t, day: newDay } : t
-    )); // Optimistic
+  const handleMoveDailyTask = async (taskId: string, newDay: string, newIndex: number) => {
+    const previousTasks = dailyTasks;
+    const activeTask = previousTasks.find(task => task.id === taskId);
+    if (!activeTask) return;
+
+    const remainingTasks = previousTasks.filter(task => task.id !== taskId);
+    const targetTasks = remainingTasks.filter(task => task.day === newDay);
+    targetTasks.splice(Math.max(0, Math.min(newIndex, targetTasks.length)), 0, { ...activeTask, day: newDay });
+
+    const affectedDays = new Set([activeTask.day, newDay]);
+    const updatedTasks = previousTasks
+      .filter(task => !affectedDays.has(task.day) && task.id !== taskId)
+      .concat(
+        [...affectedDays].flatMap(day => {
+          const dayTasks = day === newDay
+            ? targetTasks
+            : remainingTasks.filter(task => task.day === day);
+          return dayTasks.map((task, position) => ({ ...task, position }));
+        })
+      );
+
+    setDailyTasks(updatedTasks);
 
     try {
-      const { error } = await supabase
-        .from('daily_tasks')
-        .update({ day: newDay })
-        .eq('id', taskId);
-      if (error) throw error;
+      const changedTasks = updatedTasks.filter(task => affectedDays.has(task.day));
+      const results = await Promise.all(changedTasks.map(task =>
+        supabase.from('daily_tasks').update({ day: task.day, position: task.position }).eq('id', task.id)
+      ));
+      const failedResult = results.find(result => result.error);
+      if (failedResult?.error?.code === '42703' || failedResult?.error?.message?.includes('position')) {
+        const { error: dayUpdateError } = await supabase
+          .from('daily_tasks')
+          .update({ day: newDay })
+          .eq('id', taskId);
+        if (dayUpdateError) throw dayUpdateError;
+
+        const localOrder = Object.fromEntries(updatedTasks.map(task => [
+          task.id,
+          { day: task.day, position: task.position }
+        ]));
+        localStorage.setItem(`habitpulse-task-order-${session.user.id}`, JSON.stringify(localOrder));
+        return;
+      }
+      if (failedResult?.error) throw failedResult.error;
     } catch (err) {
       console.error('Error moving task:', err);
+      setDailyTasks(previousTasks);
+      alert('Não foi possível mover a tarefa. Tente novamente.');
+    }
+  };
+
+  const handleEditDailyTask = async (taskId: string, text: string) => {
+    const previousTasks = dailyTasks;
+    setDailyTasks(prev => prev.map(task => task.id === taskId ? { ...task, text } : task));
+    const { error } = await supabase.from('daily_tasks').update({ text }).eq('id', taskId);
+    if (error) {
+      console.error('Error editing task:', error);
+      setDailyTasks(previousTasks);
+      alert('Não foi possível editar a tarefa.');
     }
   };
 
@@ -936,6 +995,7 @@ const App: React.FC = () => {
                   onDeleteTask={handleDeleteDailyTask}
                   onToggleTask={handleToggleDailyTask}
                   onMoveTask={handleMoveDailyTask}
+                  onEditTask={handleEditDailyTask}
                 />
               </div>
 
