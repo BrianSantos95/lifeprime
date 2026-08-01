@@ -211,8 +211,8 @@ const FinanceAI: React.FC<FinanceAIProps> = ({ onAddTransaction }) => {
         <div className="flex flex-col h-full bg-[#111111] border border-zinc-800 rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
             {/* Header */}
             <div className="p-4 border-b border-zinc-800 bg-[#151515] flex items-center gap-3">
-                <div className="p-2 bg-purple-500/20 rounded-lg">
-                    <Bot className="text-purple-400" size={24} />
+                <div className="p-2 icon-glow-red rounded-lg">
+                    <Bot size={24} />
                 </div>
                 <div>
                     <h2 className="text-white font-bold">Agente Financeiro</h2>
@@ -225,8 +225,8 @@ const FinanceAI: React.FC<FinanceAIProps> = ({ onAddTransaction }) => {
                 {messages.map((msg) => (
                     <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         {msg.role === 'assistant' && (
-                            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 mt-1">
-                                <Bot size={16} className="text-purple-400" />
+                            <div className="w-8 h-8 rounded-full icon-glow-red flex items-center justify-center shrink-0 mt-1">
+                                <Bot size={16} />
                             </div>
                         )}
                         <div className={`
@@ -247,7 +247,7 @@ const FinanceAI: React.FC<FinanceAIProps> = ({ onAddTransaction }) => {
                                         <button
                                             key={opt}
                                             onClick={() => handleOptionClick(opt)}
-                                            className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs px-3 py-1.5 rounded-lg border border-purple-500/20 transition-colors"
+                                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors"
                                         >
                                             {opt}
                                         </button>
@@ -273,12 +273,12 @@ const FinanceAI: React.FC<FinanceAIProps> = ({ onAddTransaction }) => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Digite sua transação..."
-                        className="w-full bg-[#0a0a0a] border border-zinc-800 text-white rounded-xl py-4 pl-4 pr-14 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all placeholder:text-zinc-600"
+                        className="w-full bg-[#0a0a0a] border border-zinc-800 text-white rounded-xl py-4 pl-4 pr-14 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all placeholder:text-zinc-600"
                     />
                     <button
                         type="submit"
                         disabled={!input.trim()}
-                        className={`absolute right-2 p-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-0 disabled:pointer-events-none rounded-lg text-white transition-all duration-300 ${input.trim() ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}
+                        className={`absolute right-2 p-2 bg-red-600 hover:bg-red-700 shadow-[0_0_14px_rgba(220,38,38,0.25)] disabled:opacity-0 disabled:pointer-events-none rounded-lg text-white transition-all duration-300 ${input.trim() ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}
                     >
                         <Send size={18} />
                     </button>

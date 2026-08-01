@@ -83,7 +83,7 @@ const TaskItem = ({ task, onDelete, onToggle, onEdit }: TaskItemProps) => {
 
                 <button
                     onClick={() => onToggle(task.id)}
-                    className={`mt-0.5 flex-shrink-0 transition-colors ${task.completed ? 'text-green-500' : 'text-zinc-600 hover:text-zinc-400'
+                    className={`mt-0.5 flex-shrink-0 transition-colors ${task.completed ? 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.4)]' : 'text-zinc-600 hover:text-red-400'
                         }`}
                 >
                     {task.completed ? <CheckCircle2 size={16} /> : <Circle size={16} />}

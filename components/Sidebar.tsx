@@ -20,15 +20,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onSignOut }) 
   const getButtonClass = (page: string) => {
     const isActive = activePage === page;
     return `p-2 rounded-lg transition-colors ${isActive
-      ? 'bg-red-500/10 text-red-500'
+      ? 'icon-glow-red-strong'
       : 'text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800/50'
       }`;
   };
 
   return (
     <aside className="w-16 flex flex-col items-center py-8 border-r border-zinc-900 bg-[#0d0d0d] hidden sm:flex">
-      <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center mb-12 shadow-lg shadow-red-900/20 cursor-pointer" onClick={() => onNavigate('dashboard')}>
-        <Activity className="text-white" size={24} />
+      <div className="w-10 h-10 icon-glow-red-strong rounded-xl flex items-center justify-center mb-12 cursor-pointer" onClick={() => onNavigate('dashboard')}>
+        <Activity size={24} />
       </div>
       <nav className="flex flex-col gap-8 flex-1">
         <button

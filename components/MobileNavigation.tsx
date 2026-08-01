@@ -9,7 +9,7 @@ interface MobileNavigationProps {
 const MobileNavigation: React.FC<MobileNavigationProps> = ({ activePage, onNavigate }) => {
     const getButtonClass = (page: string) => {
         const isActive = activePage === page;
-        return `flex-1 flex flex-col items-center justify-center h-full gap-1 transition-colors ${isActive ? 'text-red-500' : 'text-zinc-500 hover:text-zinc-300'
+        return `flex-1 flex flex-col items-center justify-center h-full gap-1 transition-all ${isActive ? 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.65)]' : 'text-zinc-500 hover:text-zinc-300'
             }`;
     };
 

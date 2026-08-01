@@ -332,8 +332,8 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                        <div className="p-2 bg-emerald-500/10 rounded-xl">
-                            <Wallet className="text-emerald-500" size={28} />
+                        <div className="p-2 icon-glow-red rounded-xl">
+                            <Wallet size={28} />
                         </div>
                         Financeiro
                     </h1>
@@ -347,7 +347,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 <div className="flex gap-3">
                     <button
                         onClick={() => openTransModal('income')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg transition-all font-medium"
+                        className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-all font-medium shadow-[0_0_18px_rgba(220,38,38,0.08)]"
                     >
                         <Plus size={18} />
                         Receita
@@ -366,7 +366,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-[#111111] border border-zinc-800 p-6 rounded-2xl relative overflow-hidden group hover:border-zinc-700 transition-all">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <DollarSign size={64} className="text-emerald-500" />
+                        <DollarSign size={64} className="text-red-500" />
                     </div>
                     <div className="mb-4">
                         <span className="text-zinc-500 font-medium text-sm uppercase tracking-wider">Saldo Mensal</span>
@@ -376,7 +376,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
 
                 <div className="bg-[#111111] border border-zinc-800 p-6 rounded-2xl relative overflow-hidden group hover:border-zinc-700 transition-all">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <ArrowUpRight size={64} className="text-blue-500" />
+                        <ArrowUpRight size={64} className="text-red-500" />
                     </div>
                     <span className="text-zinc-500 font-medium text-sm uppercase tracking-wider block mb-4">Entradas</span>
                     <h2 className="text-3xl font-bold text-blue-400">R$ {totalIncome.toFixed(2)}</h2>
@@ -478,7 +478,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 <div className="bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                            <Coins size={20} className="text-yellow-500" /> Metas de Gastos
+                            <Coins size={20} className="text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.35)]" /> Metas de Gastos
                         </h3>
                         <button onClick={() => setIsBudgetModalOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
                             <Plus size={18} />
@@ -529,7 +529,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 <div className="bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                            <Calendar size={20} className="text-blue-500" /> Despesas Fixas
+                            <Calendar size={20} className="text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.35)]" /> Despesas Fixas
                         </h3>
                         <button onClick={() => setIsRecurringModalOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
                             <Plus size={18} />
