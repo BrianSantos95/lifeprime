@@ -25,7 +25,6 @@ import HabitChart from './components/HabitChart';
 import HabitGrid from './components/HabitGrid';
 import StatsCards from './components/StatsCards';
 import FinanceDashboard from './components/FinanceDashboard';
-import FinanceAI from './components/FinanceAI';
 import WeeklyKanban from './components/WeeklyKanban';
 import { Habit, ChartDataPoint, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask } from './types';
 
@@ -574,11 +573,22 @@ const App: React.FC = () => {
   };
 
   const handleAddGoal = async (data: Omit<FinancialGoal, 'id' | 'currentAmount'>) => {
+    const tempId = 'goal-' + Date.now();
+    const newGoal: FinancialGoal = {
+      id: tempId,
+      name: data.name,
+      targetAmount: Number(data.targetAmount) || 0,
+      currentAmount: 0,
+      deadline: data.deadline ? (data.deadline instanceof Date ? data.deadline : new Date(data.deadline)) : undefined,
+      icon: typeof data.icon === 'string' ? data.icon : 'Star',
+      color: data.color
+    };
+
+    // Atualização Otimista imediata na tela
+    setFinancialGoals(prev => [...prev, newGoal]);
+
     if (!session?.user?.id) return;
     try {
-      // BUG FIX #3: Salvar o ícone como string no banco.
-      // ReactNodes não podem ser persistidos — extraímos o nome da string
-      // se vier como string, ou salvamos um default.
       const iconName = typeof data.icon === 'string' ? data.icon : 'Star';
 
       const { data: goalData, error } = await supabase.from('financial_goals').insert({
@@ -591,18 +601,18 @@ const App: React.FC = () => {
         current_amount: 0
       }).select().single();
 
-      if (error) throw error;
-      if (goalData) {
-        const newGoal: FinancialGoal = {
+      if (error) {
+        console.error('Erro no Supabase ao salvar meta:', error);
+      } else if (goalData) {
+        setFinancialGoals(prev => prev.map(g => g.id === tempId ? {
           id: goalData.id,
           name: goalData.name,
-          targetAmount: goalData.target_amount,
-          currentAmount: goalData.current_amount,
+          targetAmount: Number(goalData.target_amount),
+          currentAmount: Number(goalData.current_amount),
           deadline: goalData.deadline ? new Date(goalData.deadline) : undefined,
-          icon: goalData.icon || 'Star', // Retorna a string salva
+          icon: goalData.icon || 'Star',
           color: goalData.color
-        };
-        setFinancialGoals(prev => [...prev, newGoal]);
+        } : g));
       }
     } catch (err) {
       console.error('Error adding goal:', err);
@@ -622,6 +632,16 @@ const App: React.FC = () => {
   };
 
   const handleAddBudget = async (budget: Omit<Budget, 'id'>) => {
+    const tempId = 'budget-' + Date.now();
+    const newBudget: Budget = {
+      id: tempId,
+      category: budget.category,
+      limit: Number(budget.limit) || 0
+    };
+
+    // Atualização Otimista imediata na tela
+    setBudgets(prev => [...prev, newBudget]);
+
     if (!session?.user?.id) return;
     try {
       const { data, error } = await supabase.from('budgets').insert({
@@ -630,9 +650,12 @@ const App: React.FC = () => {
         limit: budget.limit
       }).select().single();
 
-      if (error) throw error;
-      if (data) setBudgets(prev => [...prev, data]);
-    } catch (err) { console.error(err); }
+      if (error) {
+        console.error('Erro no Supabase ao salvar meta de gasto:', error);
+      } else if (data) {
+        setBudgets(prev => prev.map(b => b.id === tempId ? { ...b, id: data.id } : b));
+      }
+    } catch (err) { console.error('Error adding budget:', err); }
   };
 
   const handleAddRecurring = async (rec: Omit<RecurringExpense, 'id'>) => {
@@ -941,56 +964,56 @@ const App: React.FC = () => {
 
 
   return (
-    <div className="flex h-screen bg-[#0a0a0a] text-zinc-300 font-sans overflow-hidden" >
+    <div className="app-shell flex h-screen text-slate-300 font-sans overflow-hidden" >
       <Sidebar activePage={activePage} onNavigate={setActivePage} onSignOut={handleSignOut} />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         {activePage === 'dashboard' ? (
           <>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-24 md:pb-8">
-              <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-7 xl:p-8 pb-24 md:pb-8">
+              <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-7 gap-5">
                 <div>
-                  <h1 className="text-2xl font-bold text-white mb-1">Dashboard de Hábitos</h1>
-                  <p className="text-zinc-500 text-sm">
-                    Acompanhe sua evolução diária em <span className="text-zinc-300 font-medium capitalize">{currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+                  <h1 className="text-[28px] leading-tight font-extrabold tracking-[-0.025em] text-white mb-1">Dashboard de Hábitos</h1>
+                  <p className="text-slate-400 text-sm">
+                    Acompanhe sua evolução diária em <span className="text-white font-semibold capitalize">{currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span>
                   </p>
                 </div>
 
-                <div className="flex flex-col md:flex-row items-center gap-6 w-full xl:w-auto">
+                <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto">
                   {/* Weekly Visual Calendar */}
-                  <div className="hidden md:flex items-center gap-1.5 bg-[#111] p-1.5 rounded-xl border border-zinc-900 shadow-sm">
+                  <div className="hidden md:flex items-center gap-1 bg-[#0c111e]/80 p-1.5 rounded-2xl border border-white/[0.08] backdrop-blur-md">
                     {weekOverview.map((day, idx) => (
                       <div
                         key={idx}
-                        className={`flex flex-col items-center justify-center w-10 h-11 rounded-lg text-xs transition-colors ${day.isToday
-                          ? 'bg-zinc-800 text-white font-bold border border-zinc-700 shadow-sm'
-                          : 'text-zinc-600 hover:bg-zinc-900/50'
+                        className={`flex flex-col items-center justify-center w-10 h-11 rounded-xl text-xs transition-all ${day.isToday
+                          ? 'bg-blue-600/30 text-white font-bold border border-blue-500/40 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
+                          : 'text-slate-400 hover:bg-white/[0.05]'
                           }`}
                       >
                         <span className="leading-none text-[10px] mb-1">{day.dayStr}/{day.monthStr}</span>
-                        <span className="uppercase text-[9px] opacity-70 leading-none">{day.weekDay}</span>
+                        <span className="uppercase text-[9px] font-bold opacity-70 leading-none">{day.weekDay}</span>
                       </div>
                     ))}
                   </div>
 
                   <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                    <div className="flex bg-[#1a1a1a] rounded-lg p-1 border border-zinc-900">
+                    <div className="flex bg-[#0c111e]/80 rounded-2xl p-1 border border-white/[0.08]">
                       <button
                         onClick={handlePrevMonth}
-                        className="p-2 hover:bg-[#2a2a2a] rounded-md transition-colors text-zinc-400 hover:text-white"
+                        className="p-2 hover:bg-white/[0.08] rounded-xl transition-colors text-slate-400 hover:text-white"
                       >
                         <ChevronLeft size={18} />
                       </button>
                       <button
                         onClick={handleNextMonth}
-                        className="p-2 hover:bg-[#2a2a2a] rounded-md transition-colors text-zinc-400 hover:text-white"
+                        className="p-2 hover:bg-white/[0.08] rounded-xl transition-colors text-slate-400 hover:text-white"
                       >
                         <ChevronRight size={18} />
                       </button>
                     </div>
                     <button
                       onClick={() => setIsModalOpen(true)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all hover:shadow-[0_0_15px_rgba(220,38,38,0.4)]"
+                      className="btn-glow-primary text-white h-11 px-5 rounded-2xl flex items-center gap-2 text-sm font-semibold transition-all"
                     >
                       <Plus size={18} />
                       <span className="hidden sm:inline">Novo Hábito</span>
@@ -1012,7 +1035,7 @@ const App: React.FC = () => {
                 average={monthAverage}
               />
 
-              <div className="mb-8">
+              <div className="mb-6">
                 <WeeklyKanban
                   tasks={dailyTasks}
                   onAddTask={handleAddDailyTask}
@@ -1023,7 +1046,7 @@ const App: React.FC = () => {
                 />
               </div>
 
-              <div className="flex flex-col gap-8">
+              <div className="flex flex-col gap-5">
                 {Object.entries(sections).map(([sectionTitle, sectionHabits]) => (
                   <HabitGrid
                     key={sectionTitle}
@@ -1040,20 +1063,20 @@ const App: React.FC = () => {
 
               {/* New Habit Modal */}
               {isModalOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-[#111111] border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex justify-between items-center p-6 border-b border-zinc-900">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                  <div className="bg-[#0e1424]/90 border border-white/10 rounded-3xl w-full max-w-md shadow-[0_20px_60px_rgba(0,0,0,0.7)] backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                    <div className="flex justify-between items-center p-6 border-b border-white/[0.08]">
                       <h3 className="text-lg font-bold text-white">Criar Novo Hábito</h3>
                       <button
                         onClick={() => setIsModalOpen(false)}
-                        className="text-zinc-500 hover:text-white transition-colors"
+                        className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-white/[0.06] rounded-xl"
                       >
                         <X size={20} />
                       </button>
                     </div>
                     <form onSubmit={handleCreateHabit} className="p-6">
                       <div className="mb-6">
-                        <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                           Nome do Hábito
                         </label>
                         <input
@@ -1062,17 +1085,17 @@ const App: React.FC = () => {
                           value={newHabitName}
                           onChange={(e) => setNewHabitName(e.target.value)}
                           placeholder="Ex: Correr 5km, Beber Água..."
-                          className="w-full bg-[#1a1a1a] border border-zinc-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all placeholder:text-zinc-600 mb-4"
+                          className="w-full bg-[#121828]/80 border border-white/[0.08] text-white rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-600 mb-4 text-sm"
                         />
 
                         <div className="flex justify-between items-center mb-2">
-                          <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
                             Seção
                           </label>
                           <button
                             type="button"
                             onClick={() => setIsNewSectionMode(!isNewSectionMode)}
-                            className="text-xs text-red-500 hover:text-red-400 font-medium transition-colors"
+                            className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
                           >
                             {isNewSectionMode ? 'Selecionar existente' : 'Criar nova seção'}
                           </button>
@@ -1084,16 +1107,16 @@ const App: React.FC = () => {
                             value={newSectionName}
                             onChange={(e) => setNewSectionName(e.target.value)}
                             placeholder="Ex: Meta Profissional"
-                            className="w-full bg-[#1a1a1a] border border-zinc-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all placeholder:text-zinc-600"
+                            className="w-full bg-[#121828]/80 border border-white/[0.08] text-white rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-600 text-sm"
                           />
                         ) : (
                           <select
                             value={newSectionName}
                             onChange={(e) => setNewSectionName(e.target.value)}
-                            className="w-full bg-[#1a1a1a] border border-zinc-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                            className="w-full bg-[#121828]/80 border border-white/[0.08] text-white rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
                           >
                             {Array.from(new Set(habitDefs.map(h => h.section || 'Hábito'))).map(section => (
-                              <option key={section} value={section}>{section}</option>
+                              <option key={section} value={section} className="bg-[#0e1424] text-white">{section}</option>
                             ))}
                           </select>
                         )}
@@ -1102,14 +1125,14 @@ const App: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setIsModalOpen(false)}
-                          className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+                          className="px-4 py-2.5 text-sm font-medium text-slate-400 hover:text-white transition-colors"
                         >
                           Cancelar
                         </button>
                         <button
                           type="submit"
                           disabled={!newHabitName.trim()}
-                          className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg text-sm font-bold transition-all hover:shadow-[0_0_15px_rgba(220,38,38,0.4)]"
+                          className="btn-glow-primary text-white px-6 py-2.5 rounded-2xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Criar Hábito
                         </button>
@@ -1121,7 +1144,7 @@ const App: React.FC = () => {
             </div>
           </>
         ) : activePage === 'finance' ? (
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-24 md:pb-8">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-7 xl:p-8 pb-24 md:pb-8">
             <FinanceDashboard
               transactions={transactions}
               goals={financialGoals}
@@ -1143,54 +1166,50 @@ const App: React.FC = () => {
               onDeleteTransaction={handleDeleteTransaction}
             />
           </div>
-        ) : activePage === 'agent' ? (
-          <div className="flex-1 p-4 md:p-8 h-full flex flex-col overflow-hidden pb-20 md:pb-8">
-            <FinanceAI onAddTransaction={addTransactionFromAI} />
-          </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 animate-in fade-in duration-300">
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 animate-in fade-in duration-300">
             {activePage === 'calendar' && (
               <div className="text-center">
-                <div className="p-4 bg-zinc-900 rounded-full mb-4 inline-block">
-                  <Calendar size={32} className="text-zinc-600" />
+                <div className="p-4 bg-[#101728]/80 border border-white/[0.08] rounded-3xl mb-4 inline-block shadow-lg">
+                  <Calendar size={36} className="text-blue-400" />
                 </div>
-                <h2 className="text-xl font-bold text-zinc-300 mb-2">Calendário</h2>
-                <p className="opacity-60">Visualização de calendário em desenvolvimento.</p>
+                <h2 className="text-xl font-bold text-white mb-2">Calendário</h2>
+                <p className="opacity-60 text-sm">Visualização detalhada de calendário em desenvolvimento.</p>
               </div>
             )}
             {activePage === 'profile' && (
               <div className="w-full max-w-sm mx-auto">
-                <div className="bg-[#111] border border-zinc-800 rounded-2xl p-8 text-center shadow-lg">
-                  <div className="w-20 h-20 bg-zinc-800 rounded-full mx-auto mb-4 flex items-center justify-center text-zinc-500">
+                <div className="dashboard-card p-8 text-center shadow-2xl">
+                  <div className="w-20 h-20 bg-gradient-to-tr from-blue-600/30 to-indigo-600/30 border border-blue-500/40 rounded-full mx-auto mb-4 flex items-center justify-center text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.3)]">
                     <User size={40} />
                   </div>
-                  <h2 className="text-xl font-bold text-white mb-1">Minha Conta</h2>
-                  <p className="text-zinc-400 text-sm mb-8">{session?.user?.email}</p>
+                  <h2 className="text-xl font-extrabold text-white mb-1">Minha Conta</h2>
+                  <p className="text-slate-400 text-sm mb-8">{session?.user?.email}</p>
 
                   <div className="flex flex-col gap-3">
-                    <button className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-3 rounded-lg font-medium transition-all text-sm flex items-center justify-center gap-2">
+                    <button className="w-full bg-[#121828]/80 hover:bg-white/[0.06] border border-white/[0.08] text-slate-200 py-3 rounded-2xl font-semibold transition-all text-sm flex items-center justify-center gap-2">
                       <Edit2 size={16} />
                       Editar Perfil
                     </button>
                     <button
                       onClick={handleSignOut}
-                      className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-3 rounded-lg font-medium transition-all text-sm flex items-center justify-center gap-2"
+                      className="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 py-3 rounded-2xl font-semibold transition-all text-sm flex items-center justify-center gap-2"
                     >
-                      <Trash2 size={16} /> {/* Using Trash as logout icon substitute for variety, or keep LogOut */}
+                      <Trash2 size={16} />
                       Sair da Conta
                     </button>
                   </div>
 
-                  <div className="mt-8 pt-8 border-t border-zinc-900">
-                    <p className="text-xs text-zinc-600 uppercase tracking-widest font-bold">Estatísticas Gerais</p>
+                  <div className="mt-8 pt-8 border-t border-white/[0.08]">
+                    <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Estatísticas Gerais</p>
                     <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="bg-zinc-900/50 p-3 rounded-lg">
+                      <div className="bg-[#121828]/80 p-3 rounded-2xl border border-white/[0.06]">
                         <div className="text-2xl font-bold text-white">{habitDefs.length}</div>
-                        <div className="text-xs text-zinc-500">Hábitos Ativos</div>
+                        <div className="text-xs text-slate-400">Hábitos Ativos</div>
                       </div>
-                      <div className="bg-zinc-900/50 p-3 rounded-lg">
-                        <div className="text-2xl font-bold text-green-500">{globalSuccessRate}%</div>
-                        <div className="text-xs text-zinc-500">Taxa de Sucesso</div>
+                      <div className="bg-[#121828]/80 p-3 rounded-2xl border border-white/[0.06]">
+                        <div className="text-2xl font-bold text-emerald-400">{globalSuccessRate}%</div>
+                        <div className="text-xs text-slate-400">Taxa de Sucesso</div>
                       </div>
                     </div>
                   </div>
@@ -1202,43 +1221,43 @@ const App: React.FC = () => {
 
         {/* Habit Options Modal */}
         {habitAction === 'options' && activeHabit && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-[#111111] border border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex justify-between items-center p-6 border-b border-zinc-900">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-[#0e1424]/90 border border-white/10 rounded-3xl w-full max-w-sm shadow-[0_20px_60px_rgba(0,0,0,0.7)] backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+              <div className="flex justify-between items-center p-6 border-b border-white/[0.08]">
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg bg-[#1a1a1a] flex items-center justify-center ${activeHabit.color} border border-zinc-800/50`}>
+                  <div className={`w-9 h-9 rounded-2xl bg-blue-500/20 flex items-center justify-center ${activeHabit.color} border border-blue-500/30`}>
                     {activeHabit.icon}
                   </div>
                   <h3 className="text-lg font-bold text-white truncate max-w-[180px]">{activeHabit.name}</h3>
                 </div>
-                <button onClick={closeHabitModal} className="text-zinc-500 hover:text-white transition-colors">
+                <button onClick={closeHabitModal} className="text-slate-400 hover:text-white transition-colors p-1">
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-2">
+              <div className="p-3">
                 <button
                   onClick={startRename}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-[#1a1a1a] rounded-xl text-zinc-300 hover:text-white transition-all group"
+                  className="w-full flex items-center gap-3.5 p-4 hover:bg-white/[0.05] rounded-2xl text-slate-300 hover:text-white transition-all group"
                 >
-                  <div className="p-2 bg-zinc-900 rounded-lg group-hover:bg-zinc-800 transition-colors">
+                  <div className="p-2.5 bg-[#121828] rounded-xl group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
                     <Edit2 size={18} />
                   </div>
                   <div className="text-left">
-                    <span className="block font-medium">Renomear Hábito</span>
-                    <span className="text-xs text-zinc-500">Alterar o nome de exibição</span>
+                    <span className="block font-semibold text-sm">Renomear Hábito</span>
+                    <span className="text-xs text-slate-500">Alterar o nome de exibição</span>
                   </div>
                 </button>
-                <div className="h-px bg-zinc-900 mx-4 my-1" />
+                <div className="h-px bg-white/[0.06] mx-4 my-1" />
                 <button
                   onClick={startDelete}
-                  className="w-full flex items-center gap-3 p-4 hover:bg-red-500/10 rounded-xl text-zinc-300 hover:text-red-500 transition-all group"
+                  className="w-full flex items-center gap-3.5 p-4 hover:bg-rose-500/10 rounded-2xl text-slate-300 hover:text-rose-400 transition-all group"
                 >
-                  <div className="p-2 bg-zinc-900 rounded-lg group-hover:bg-red-500/20 transition-colors text-zinc-500 group-hover:text-red-500">
+                  <div className="p-2.5 bg-[#121828] rounded-xl group-hover:bg-rose-500/20 transition-colors text-slate-500 group-hover:text-rose-400">
                     <Trash2 size={18} />
                   </div>
                   <div className="text-left">
-                    <span className="block font-medium">Excluir Hábito</span>
-                    <span className="text-xs text-zinc-500">Esta ação não pode ser desfeita</span>
+                    <span className="block font-semibold text-sm">Excluir Hábito</span>
+                    <span className="text-xs text-slate-500">Esta ação não pode ser desfeita</span>
                   </div>
                 </button>
               </div>
@@ -1248,28 +1267,28 @@ const App: React.FC = () => {
 
         {/* Rename Modal */}
         {habitAction === 'rename' && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-[#111111] border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex justify-between items-center p-6 border-b border-zinc-900">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-[#0e1424]/90 border border-white/10 rounded-3xl w-full max-w-md shadow-[0_20px_60px_rgba(0,0,0,0.7)] backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+              <div className="flex justify-between items-center p-6 border-b border-white/[0.08]">
                 <h3 className="text-lg font-bold text-white">Renomear Hábito</h3>
-                <button onClick={closeHabitModal} className="text-zinc-500 hover:text-white transition-colors">
+                <button onClick={closeHabitModal} className="text-slate-400 hover:text-white transition-colors p-1">
                   <X size={20} />
                 </button>
               </div>
               <form onSubmit={confirmRename} className="p-6">
                 <div className="mb-6">
-                  <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Novo Nome</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Novo Nome</label>
                   <input
                     type="text"
                     autoFocus
                     value={renameText}
                     onChange={(e) => setRenameText(e.target.value)}
-                    className="w-full bg-[#1a1a1a] border border-zinc-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                    className="w-full bg-[#121828]/80 border border-white/[0.08] text-white rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all text-sm"
                   />
                 </div>
                 <div className="flex justify-end gap-3">
-                  <button type="button" onClick={() => setHabitAction('options')} className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors">Voltar</button>
-                  <button type="submit" disabled={!renameText.trim()} className="bg-white text-black hover:bg-zinc-200 px-6 py-2 rounded-lg text-sm font-bold transition-all">Salvar</button>
+                  <button type="button" onClick={() => setHabitAction('options')} className="px-4 py-2.5 text-sm font-medium text-slate-400 hover:text-white transition-colors">Voltar</button>
+                  <button type="submit" disabled={!renameText.trim()} className="btn-glow-primary text-white px-6 py-2.5 rounded-2xl text-sm font-bold transition-all disabled:opacity-50">Salvar</button>
                 </div>
               </form>
             </div>
@@ -1278,15 +1297,15 @@ const App: React.FC = () => {
 
         {/* Delete Confirmation Modal */}
         {habitAction === 'delete' && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-[#111111] border border-red-900/30 rounded-2xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-[#0e1424]/90 border border-rose-500/30 rounded-3xl w-full max-w-md shadow-[0_20px_60px_rgba(0,0,0,0.7)] backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
               <div className="p-6 text-center">
-                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Trash2 size={32} className="text-red-500" />
+                <div className="w-16 h-16 bg-rose-500/15 border border-rose-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.3)]">
+                  <Trash2 size={30} />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Tem certeza?</h3>
-                <p className="text-zinc-400 text-sm mb-6">
-                  Para confirmar a exclusão do hábito <span className="text-white font-medium">"{activeHabit?.name}"</span>, digite <span className="text-red-500 font-bold uppercase">excluir</span> abaixo.
+                <p className="text-slate-400 text-sm mb-6">
+                  Para confirmar a exclusão do hábito <span className="text-white font-semibold">"{activeHabit?.name}"</span>, digite <span className="text-rose-400 font-bold uppercase">excluir</span> abaixo.
                 </p>
                 <form onSubmit={confirmDelete}>
                   <input
@@ -1295,14 +1314,14 @@ const App: React.FC = () => {
                     placeholder="Digite 'excluir'"
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    className="w-full bg-[#1a1a1a] border border-zinc-800 text-white rounded-lg px-4 py-3 mb-6 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all text-center placeholder:text-zinc-700"
+                    className="w-full bg-[#121828]/80 border border-white/[0.08] text-white rounded-2xl px-4 py-3 mb-6 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all text-center placeholder:text-slate-600 text-sm"
                   />
                   <div className="flex justify-center gap-3">
-                    <button type="button" onClick={() => setHabitAction('options')} className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors">Cancelar</button>
+                    <button type="button" onClick={() => setHabitAction('options')} className="px-4 py-2.5 text-sm font-medium text-slate-400 hover:text-white transition-colors">Cancelar</button>
                     <button
                       type="submit"
                       disabled={deleteConfirmText.toLowerCase() !== 'excluir'}
-                      className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg text-sm font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
+                      className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(225,29,72,0.3)]"
                     >
                       Excluir Hábito
                     </button>
@@ -1320,3 +1339,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

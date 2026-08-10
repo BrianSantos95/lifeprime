@@ -3,44 +3,177 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Life Prime</title>
+    <title>Life Prime - Life Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            },
+          }
+        }
+      }
+    </script>
     <style>
-      /* Custom Scrollbar for the dark theme */
+      /* Custom Scrollbar for the sleek dark theme */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: #0a0a0a; 
+        background: rgba(10, 14, 23, 0.4); 
       }
       ::-webkit-scrollbar-thumb {
-        background: #27272a; 
-        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.12); 
+        border-radius: 9999px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #3f3f46; 
+        background: rgba(99, 102, 241, 0.35); 
       }
 
-      .icon-glow-red {
-        color: #f87171;
-        background: rgba(239, 68, 68, 0.08);
-        border: 1px solid rgba(239, 68, 68, 0.16);
-        box-shadow: inset 0 0 12px rgba(239, 68, 68, 0.05), 0 0 22px rgba(220, 38, 38, 0.1);
-        backdrop-filter: blur(10px);
+      :root {
+        color-scheme: dark;
+        --surface: rgba(16, 23, 38, 0.65);
+        --surface-border: rgba(255, 255, 255, 0.08);
+        --accent-blue: #3b82f6;
+        --accent-glow: rgba(59, 130, 246, 0.3);
       }
 
-      .icon-glow-red-strong {
-        color: #fecaca;
-        background: rgba(220, 38, 38, 0.16);
-        border: 1px solid rgba(248, 113, 113, 0.3);
-        box-shadow: 0 0 24px rgba(220, 38, 38, 0.22);
-        backdrop-filter: blur(12px);
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: #080b13;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: #94a3b8;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      /* Ambient Light Glow Backgrounds */
+      .bg-ambient-glow {
+        background-color: #070912;
+        background-image: 
+          radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+          radial-gradient(circle at 85% 20%, rgba(99, 102, 241, 0.10) 0%, transparent 45%),
+          radial-gradient(circle at 50% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+      }
+
+      .glass-panel {
+        background: rgba(15, 22, 35, 0.65);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      }
+
+      .glass-card {
+        background: rgba(16, 23, 38, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .glass-card:hover {
+        border-color: rgba(99, 102, 241, 0.28);
+        background: rgba(20, 29, 48, 0.75);
+        box-shadow: 0 20px 45px -12px rgba(10, 15, 30, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      }
+
+      .dashboard-card {
+        background: rgba(15, 21, 35, 0.65);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 22px;
+        box-shadow: 0 14px 36px -10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .dashboard-card:hover {
+        border-color: rgba(99, 102, 241, 0.25);
+        box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .app-shell {
+        background: rgba(11, 15, 25, 0.85);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.8), 0 0 50px rgba(59, 130, 246, 0.04);
+      }
+
+      .section-label {
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      /* Glow badges inspired by reference images */
+      .badge-glow-green {
+        background: rgba(16, 185, 129, 0.12);
+        color: #34d399;
+        border: 1px solid rgba(52, 211, 153, 0.25);
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+      }
+
+      .badge-glow-blue {
+        background: rgba(59, 130, 246, 0.12);
+        color: #60a5fa;
+        border: 1px solid rgba(96, 165, 250, 0.25);
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.15);
+      }
+
+      .badge-glow-purple {
+        background: rgba(139, 92, 246, 0.12);
+        color: #c084fc;
+        border: 1px solid rgba(192, 132, 252, 0.25);
+        box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+      }
+
+      /* Glass CTA Buttons */
+      .btn-glow-primary {
+        background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        transition: all 0.2s ease;
+      }
+      .btn-glow-primary:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%);
+        box-shadow: 0 6px 25px rgba(37, 99, 235, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+      }
+
+      /* Credit Card Glass Effect (AURA Bank Reference) */
+      .glass-credit-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(24px);
+      }
+
+      @media (min-width: 1100px) {
+        body { padding: 20px; overflow: hidden; height: 100vh; }
+        .app-shell {
+          height: calc(100vh - 40px);
+          max-width: 1650px;
+          margin: 0 auto;
+          border-radius: 28px;
+        }
       }
     </style>
-</head>
-  <body class="bg-[#0a0a0a] text-zinc-300">
+  </head>
+  <body class="bg-ambient-glow text-slate-300">
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

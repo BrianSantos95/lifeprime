@@ -68,22 +68,21 @@ const TaskItem = ({ task, onDelete, onToggle, onEdit }: TaskItemProps) => {
         setIsEditing(false);
     };
 
-    return (
-        <div
+    return (        <div
             ref={setNodeRef}
             style={style}
-            className={`group bg-[#1a1a1a] p-3 rounded-lg border flex items-start justify-between gap-2 shadow-sm touch-none ${isDragging ? 'border-red-500 z-50' : 'border-zinc-800 hover:border-zinc-700'
+            className={`group bg-[#101728]/70 backdrop-blur-md p-3 rounded-xl border flex items-start justify-between gap-2 shadow-sm touch-none transition-all duration-200 ${isDragging ? 'border-blue-500 z-50 shadow-[0_0_20px_rgba(59,130,246,0.4)]' : 'border-white/[0.07] hover:border-white/[0.14]'
                 }`}
         >
             <div className="flex items-start gap-2 overflow-hidden flex-1">
                 {/* Drag Handle */}
-                <div {...attributes} {...listeners} className="mt-1 cursor-grab active:cursor-grabbing text-zinc-700 hover:text-zinc-500 flex-shrink-0">
+                <div {...attributes} {...listeners} className="mt-1 cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 flex-shrink-0">
                     <GripVertical size={14} />
                 </div>
 
                 <button
                     onClick={() => onToggle(task.id)}
-                    className={`mt-0.5 flex-shrink-0 transition-colors ${task.completed ? 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.4)]' : 'text-zinc-600 hover:text-red-400'
+                    className={`mt-0.5 flex-shrink-0 transition-colors ${task.completed ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]' : 'text-slate-600 hover:text-blue-400'
                         }`}
                 >
                     {task.completed ? <CheckCircle2 size={16} /> : <Circle size={16} />}
@@ -102,10 +101,10 @@ const TaskItem = ({ task, onDelete, onToggle, onEdit }: TaskItemProps) => {
                                     setIsEditing(false);
                                 }
                             }}
-                            className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-red-500"
+                            className="w-full bg-[#0e1424] border border-blue-500/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     ) : (
-                        <span className={`text-sm leading-snug break-words whitespace-pre-wrap ${task.completed ? 'text-zinc-600 line-through' : 'text-zinc-300'}`}>
+                        <span className={`text-sm leading-snug break-words whitespace-pre-wrap ${task.completed ? 'text-slate-500 line-through' : 'text-slate-200 font-medium'}`}>
                             {task.text}
                         </span>
                     )}
@@ -116,14 +115,14 @@ const TaskItem = ({ task, onDelete, onToggle, onEdit }: TaskItemProps) => {
                 <button
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => isEditing ? saveEdit() : setIsEditing(true)}
-                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-all"
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-slate-500 hover:text-slate-200 hover:bg-white/[0.06] rounded transition-all"
                     title={isEditing ? 'Salvar' : 'Editar'}
                 >
                     {isEditing ? <Check size={14} /> : <Pencil size={14} />}
                 </button>
                 <button
                     onClick={() => onDelete(task.id)}
-                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all"
                     title="Excluir"
                 >
                     <Trash2 size={14} />
@@ -172,14 +171,19 @@ const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask, onEdi
     return (
         <div
             ref={setNodeRef}
-            className="flex flex-col min-w-[85vw] sm:min-w-[45vw] md:min-w-[300px] bg-[#111111] rounded-xl border border-zinc-800/50 snap-center h-fit flex-shrink-0"
+            className="flex flex-col min-w-[82vw] sm:min-w-[280px] md:min-w-[270px] bg-[#0d1220]/75 backdrop-blur-xl rounded-2xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.4)] snap-center h-fit flex-shrink-0"
         >
             {/* Header */}
-            <div className="p-3 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/30 rounded-t-xl sticky top-0 z-10">
-                <span className="font-semibold text-zinc-300 text-sm">{day}</span>
+            <div className="px-4 py-3 border-b border-white/[0.06] flex justify-between items-center bg-transparent rounded-t-2xl sticky top-0 z-10">
+                <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm">{day}</span>
+                    <span className="text-[10px] bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-semibold">
+                        {tasks.length}
+                    </span>
+                </div>
                 <button
                     onClick={() => setIsAdding(!isAdding)}
-                    className="p-1 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-red-400 transition-colors"
+                    className="p-1 hover:bg-blue-500/20 rounded-lg text-slate-400 hover:text-blue-400 transition-colors"
                     title="Adicionar tarefa"
                 >
                     <Plus size={16} />
@@ -187,7 +191,7 @@ const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask, onEdi
             </div>
 
             {/* Tasks List */}
-            <div className="p-2 flex flex-col gap-2 min-h-[150px]">
+            <div className="p-2.5 flex flex-col gap-2 min-h-[164px]">
                 <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
                     {tasks.map((task) => (
                         <TaskItem
@@ -202,7 +206,7 @@ const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask, onEdi
 
                 {/* Adding Input */}
                 {isAdding && (
-                    <div className="bg-[#1a1a1a] p-2 rounded-lg border border-red-500/30 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-[#121828] p-2.5 rounded-xl border border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.2)] animate-in fade-in zoom-in-95 duration-200">
                         <input
                             autoFocus
                             type="text"
@@ -210,18 +214,18 @@ const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask, onEdi
                             onChange={(e) => setNewTaskText(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Nova tarefa..."
-                            className="w-full bg-transparent text-sm text-white placeholder:text-zinc-600 focus:outline-none mb-2"
+                            className="w-full bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none mb-2"
                         />
                         <div className="flex justify-end gap-1">
                             <button
                                 onClick={() => setIsAdding(false)}
-                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded"
+                                className="p-1 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] rounded"
                             >
                                 <X size={14} />
                             </button>
                             <button
                                 onClick={handleConfirmAdd}
-                                className="p-1 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded"
+                                className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded disabled:opacity-40"
                                 disabled={!newTaskText.trim()}
                             >
                                 <Plus size={14} />
@@ -231,7 +235,7 @@ const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask, onEdi
                 )}
 
                 {!isAdding && tasks.length === 0 && (
-                    <div className="flex-1 flex items-center justify-center text-zinc-800/50 text-xs py-4 select-none italic">
+                    <div className="flex-1 flex items-center justify-center text-slate-600 text-xs py-6 select-none italic">
                         Sem tarefas
                     </div>
                 )}
@@ -246,12 +250,12 @@ const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteT
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Require 8px movement before drag starts (prevent accidental clicks)
+                distance: 8,
             },
         }),
         useSensor(TouchSensor, {
             activationConstraint: {
-                delay: 250, // Long press for 250ms on mobile
+                delay: 250,
                 tolerance: 5,
             },
         }),
@@ -288,8 +292,14 @@ const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteT
     };
 
     return (
-        <div className="w-full">
-            <h2 className="text-xl font-bold text-zinc-200 mb-6">Planejamento Semanal</h2>
+        <div className="dashboard-card w-full p-5 md:p-6">
+            <div className="flex items-end justify-between mb-5">
+                <div>
+                    <p className="section-label mb-1">Sua semana</p>
+                    <h2 className="text-lg font-semibold text-slate-100">Planejamento Semanal</h2>
+                </div>
+                <p className="hidden sm:block text-xs text-slate-500">Arraste para reorganizar</p>
+            </div>
 
             <DndContext
                 sensors={sensors}
@@ -297,7 +307,7 @@ const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteT
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scroll-pl-4 px-4 md:px-0">
+                <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
                     {DAYS.map((day) => (
                         <KanbanColumn
                             key={day}
@@ -313,8 +323,8 @@ const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteT
 
                 <DragOverlay>
                     {activeId ? (
-                        <div className="bg-[#1a1a1a] p-3 rounded-lg border border-red-500 shadow-xl opacity-90 w-[200px]">
-                            <span className="text-sm text-zinc-300">
+                        <div className="bg-[#121828] p-3 rounded-xl border border-blue-500/50 shadow-2xl opacity-90 w-[200px]">
+                            <span className="text-sm text-slate-200">
                                 {tasks.find(t => t.id === activeId)?.text}
                             </span>
                         </div>

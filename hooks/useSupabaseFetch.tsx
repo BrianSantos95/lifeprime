@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Habit, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask } from '../types';
@@ -13,7 +12,7 @@ const iconMap: Record<string, any> = {
     'Zap': <Circle size={12} fill="currentColor" />,
     'Music': <Circle size={12} fill="currentColor" />,
     'Briefcase': <Circle size={12} fill="currentColor" />,
-    'Circle': <Circle size={12} fill="currentColor" /> // New standard
+    'Circle': <Circle size={12} fill="currentColor" />
 };
 
 export const useSupabaseData = (session: any) => {
@@ -54,21 +53,17 @@ export const useSupabaseData = (session: any) => {
                 if (compData) {
                     const map: Record<string, boolean> = {};
                     compData.forEach((c: any) => {
-                        // Support both potential column names and avoid UTC conversion issues by splitting string
                         const dateStr = c.date || c.completed_date;
                         if (!dateStr) return;
 
                         const [year, month, day] = dateStr.split('-');
-
-                        // JS Date uses 0-indexed months (0=Jan, 1=Feb)
-                        // DB uses 1-indexed (01=Jan, 02=Feb)
                         const key = `${c.habit_id}-${parseInt(year)}-${parseInt(month) - 1}-${parseInt(day)}`;
                         map[key] = true;
                     });
                     setCompletions(map);
                 }
 
-                // 3. Transactions (ordenadas da mais recente para mais antiga)
+                // 3. Transactions
                 const { data: transData } = await supabase.from('transactions').select('*').order('date', { ascending: false });
                 if (transData) {
                     const formatted = transData.map((t: any) => ({
@@ -80,7 +75,18 @@ export const useSupabaseData = (session: any) => {
 
                 // 4. Goals
                 const { data: goalsData } = await supabase.from('financial_goals').select('*').order('created_at', { ascending: true });
-                if (goalsData) setGoals(goalsData);
+                if (goalsData) {
+                    const formattedGoals = goalsData.map((g: any) => ({
+                        id: g.id,
+                        name: g.name,
+                        targetAmount: Number(g.target_amount),
+                        currentAmount: Number(g.current_amount),
+                        deadline: g.deadline ? new Date(g.deadline) : undefined,
+                        icon: g.icon,
+                        color: g.color
+                    }));
+                    setGoals(formattedGoals);
+                }
 
                 // 5. Budgets
                 const { data: budgetsData } = await supabase.from('budgets').select('*').order('created_at', { ascending: true });
@@ -106,11 +112,8 @@ export const useSupabaseData = (session: any) => {
                     .order('position', { ascending: true })
                     .order('created_at', { ascending: true });
 
-                // Bancos criados antes da ordenação ainda não possuem `position`.
-                // Nesse caso, mantém as tarefas visíveis na ordem de criação.
-                const isLegacyTaskSchema = tasksError?.code === '42703' || tasksError?.message?.includes('position');
-                if (isLegacyTaskSchema) {
-                    const fallback = await supabase
+                if (tasksError) {
+                    const { data: fallbackData } = await supabase
                         .from('daily_tasks')
                         .select('*')
                         .order('created_at', { ascending: true });

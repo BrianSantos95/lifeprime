@@ -409,30 +409,30 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             {/* Header with Navigation and Actions */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                        <div className="p-2 icon-glow-red rounded-xl">
-                            <Wallet size={28} />
+                    <h1 className="text-3xl font-extrabold text-white mb-2 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-[0_0_20px_rgba(59,130,246,0.4)]">
+                            <Wallet size={22} />
                         </div>
                         Financeiro
                     </h1>
-                    <div className="flex items-center gap-2 text-zinc-400">
-                        <button onClick={() => onNavigateMonth('prev')} className="p-1 hover:text-white transition-colors"><ChevronLeft size={20} /></button>
-                        <span className="capitalize font-medium text-white">{currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span>
-                        <button onClick={() => onNavigateMonth('next')} className="p-1 hover:text-white transition-colors"><ChevronRight size={20} /></button>
+                    <div className="flex items-center gap-3 text-slate-400 text-sm">
+                        <button onClick={() => onNavigateMonth('prev')} className="p-1.5 hover:bg-white/[0.06] rounded-lg hover:text-white transition-colors"><ChevronLeft size={18} /></button>
+                        <span className="capitalize font-semibold text-white bg-white/[0.05] border border-white/[0.08] px-3 py-1 rounded-xl">{currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+                        <button onClick={() => onNavigateMonth('next')} className="p-1.5 hover:bg-white/[0.06] rounded-lg hover:text-white transition-colors"><ChevronRight size={18} /></button>
                     </div>
                 </div>
 
                 <div className="flex gap-3">
                     <button
                         onClick={() => openTransModal('income')}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-all font-medium shadow-[0_0_18px_rgba(220,38,38,0.08)]"
+                        className="btn-glow-primary text-white px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all"
                     >
                         <Plus size={18} />
                         Receita
                     </button>
                     <button
                         onClick={() => openTransModal('expense')}
-                        className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 rounded-lg transition-all font-medium"
+                        className="bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold transition-all shadow-[0_0_15px_rgba(244,63,94,0.2)]"
                     >
                         <Minus size={18} />
                         Despesa
@@ -440,103 +440,243 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-[#111111] border border-zinc-800 p-6 rounded-2xl relative overflow-hidden group hover:border-zinc-700 transition-all">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <DollarSign size={64} className="text-red-500" />
+            {/* AURA Bank Style Credit Card & Top Stats Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Metallic Glass Credit Card Mockup */}
+                <div className="glass-credit-card p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between min-h-[220px] group">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex justify-between items-start relative z-10">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="w-6 h-6 rounded-lg bg-blue-500/30 border border-blue-400/40 flex items-center justify-center text-blue-300">
+                                    <Coins size={14} />
+                                </div>
+                                <span className="text-xs font-bold tracking-widest text-slate-300 uppercase">LIFE PRIME</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 uppercase font-semibold">Conta Principal</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full badge-glow-green text-xs font-bold">
+                            <ArrowUpRight size={14} />
+                            <span>+2.1% hoje</span>
+                        </div>
                     </div>
-                    <div className="mb-4">
-                        <span className="text-zinc-500 font-medium text-sm uppercase tracking-wider">Saldo Mensal</span>
+
+                    <div className="my-4 relative z-10">
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Saldo Disponível</span>
+                        <h2 className={`text-4xl font-extrabold tracking-tight ${balance >= 0 ? 'text-white' : 'text-rose-400'}`}>
+                            R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </h2>
                     </div>
-                    <h2 className={`text-3xl font-bold ${balance >= 0 ? 'text-white' : 'text-rose-400'}`}>R$ {balance.toFixed(2)}</h2>
+
+                    <div className="flex justify-between items-end text-xs text-slate-400 relative z-10 pt-2 border-t border-white/10">
+                        <div className="font-mono tracking-widest">•••• 4158 •••• 7930</div>
+                        <span className="font-bold text-white tracking-widest uppercase text-[11px] italic">VISA INFINITE</span>
+                    </div>
                 </div>
 
-                <div className="bg-[#111111] border border-zinc-800 p-6 rounded-2xl relative overflow-hidden group hover:border-zinc-700 transition-all">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <ArrowUpRight size={64} className="text-red-500" />
+                {/* Metric Cards (Entradas & Saídas) */}
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="dashboard-card p-6 flex flex-col justify-between relative overflow-hidden group">
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                                <ArrowUpRight size={26} />
+                            </div>
+                            <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                                Receitas do mês
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">Total de Entradas</span>
+                            <h2 className="text-3xl font-extrabold text-blue-400 tracking-tight">R$ {totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
+                        </div>
                     </div>
-                    <span className="text-zinc-500 font-medium text-sm uppercase tracking-wider block mb-4">Entradas</span>
-                    <h2 className="text-3xl font-bold text-blue-400">R$ {totalIncome.toFixed(2)}</h2>
-                </div>
 
-                <div className="bg-[#111111] border border-zinc-800 p-6 rounded-2xl relative overflow-hidden group hover:border-zinc-700 transition-all">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <ArrowDownRight size={64} className="text-rose-500" />
+                    <div className="dashboard-card p-6 flex flex-col justify-between relative overflow-hidden group">
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.2)]">
+                                <ArrowDownRight size={26} />
+                            </div>
+                            <span className="text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-full">
+                                Saídas do mês
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">Total de Despesas</span>
+                            <h2 className="text-3xl font-extrabold text-rose-400 tracking-tight">R$ {totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
+                        </div>
                     </div>
-                    <span className="text-zinc-500 font-medium text-sm uppercase tracking-wider block mb-4">Saídas</span>
-                    <h2 className="text-3xl font-bold text-rose-400">R$ {totalExpense.toFixed(2)}</h2>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="contents">
                 {/* Main Chart */}
-                <div className="lg:col-span-2 lg:order-1 bg-[#111111] border border-zinc-800 rounded-2xl p-6">
-                    <h3 className="text-lg font-bold text-white mb-6">Fluxo de Caixa ({currentDate.toLocaleString('pt-BR', { month: 'long' })})</h3>
-                    <div className="h-[300px] w-full">
+                <div className="lg:col-span-2 dashboard-card p-6">
+                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_#60a5fa]" />
+                        Fluxo de Caixa ({currentDate.toLocaleString('pt-BR', { month: 'long' })})
+                    </h3>
+                    <div className="h-[280px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={2}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                                <XAxis dataKey="day" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                                <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
+                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 15, bottom: 0 }} barGap={3}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                                <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+                                <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} width={45} tickFormatter={(value) => `R$${value}`} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
+                                    contentStyle={{ backgroundColor: '#0e1424', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '14px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
                                     itemStyle={{ color: '#fff' }}
                                     formatter={(value: any) => [`R$ ${value}`, '']}
                                 />
                                 <Legend />
-                                <Bar dataKey="income" name="Receitas" fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                <Bar dataKey="expense" name="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                <Bar dataKey="income" name="Receitas" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                                <Bar dataKey="expense" name="Despesas" fill="#f43f5e" radius={[6, 6, 0, 0]} maxBarSize={36} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Goals Section */}
-                <div className="lg:col-span-2 lg:order-4 bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
+                {/* Recurring Expenses */}
+                <div className="lg:col-span-1 dashboard-card p-6 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-white">Metas Financeiras</h3>
-                        <button onClick={() => setIsGoalModalOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <Calendar size={20} className="text-blue-400 drop-shadow-[0_0_6px_rgba(59,130,246,0.5)]" /> Despesas Fixas
+                        </h3>
+                        <button onClick={openNewRecurringModal} className="p-2 hover:bg-white/[0.06] rounded-xl text-slate-400 hover:text-white transition-colors">
+                            <Plus size={18} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1 max-h-[340px]">
+                        {recurringExpenses.length === 0 ? (
+                            <div className="text-center text-slate-500 py-6 text-sm">Nenhuma despesa fixa.</div>
+                        ) : (
+                            recurringExpenses.map(rec => {
+                                const isPaid = rec.lastPaidDate &&
+                                    rec.lastPaidDate.getMonth() === currentDate.getMonth() &&
+                                    rec.lastPaidDate.getFullYear() === currentDate.getFullYear();
+                                const nextDue = getNextDueInfo(rec.dayOfMonth, rec.lastPaidDate);
+
+                                return (
+                                    <div key={rec.id} className="bg-[#101728]/80 p-4 rounded-2xl border border-white/[0.08] flex flex-col gap-3 group hover:border-blue-500/40 transition-all">
+                                        {/* Top Row: Title, Tag, Edit/Delete */}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span className="text-white font-bold text-sm truncate">{rec.description}</span>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${rec.type === 'fixed' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' : 'bg-purple-500/15 text-purple-400 border border-purple-500/30'}`}>
+                                                    {rec.type === 'fixed' ? 'FIXA' : 'VARIÁVEL'}
+                                                </span>
+                                                {rec.installmentsTotal && (
+                                                    <span className="text-[10px] px-2 py-0.5 rounded-full uppercase shrink-0 bg-slate-800 text-slate-300 border border-slate-700">
+                                                        {rec.currentInstallment || 1}/{rec.installmentsTotal}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
+                                                <button
+                                                    onClick={() => openEditRecurringModal(rec)}
+                                                    className="p-1 hover:bg-white/[0.08] rounded-lg text-slate-400 hover:text-white transition-colors"
+                                                    title="Editar despesa"
+                                                >
+                                                    <Edit2 size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => onDeleteRecurring(rec.id)}
+                                                    className="p-1 hover:bg-rose-500/20 rounded-lg text-slate-400 hover:text-rose-400 transition-colors"
+                                                    title="Excluir despesa"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Middle Info Row: Date & Category */}
+                                        <div className="text-xs text-slate-400 flex items-center gap-2">
+                                            <span className="inline-flex items-center gap-1 text-slate-300 font-medium">
+                                                <Calendar size={12} className="text-blue-400" />
+                                                {nextDue.formattedDate}
+                                            </span>
+                                            <span>•</span>
+                                            <span className="truncate">{rec.category}</span>
+                                        </div>
+
+                                        {/* Bottom Row: Countdown Badge, Price, Payment CTA */}
+                                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
+                                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-300 bg-white/[0.05] border border-white/[0.08] rounded-xl px-2.5 py-1 whitespace-nowrap">
+                                                <Clock3 size={12} className="text-blue-400" />
+                                                <span>{nextDue.countdown}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                {rec.amount && <span className="text-sm font-extrabold text-white">R$ {rec.amount}</span>}
+                                                {isPaid ? (
+                                                    <button
+                                                        onClick={() => handleRecurringClick(rec, !!isPaid)}
+                                                        className="text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-3 py-1.5 rounded-xl hover:bg-rose-500/20 hover:text-rose-400 transition-all shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                                                        title="Desfazer pagamento"
+                                                    >
+                                                        PAGO
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleRecurringClick(rec, !!isPaid)}
+                                                        className="text-xs px-3.5 py-1.5 rounded-xl transition-all btn-glow-primary text-white font-semibold"
+                                                    >
+                                                        Pagar
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+
+                {/* Goals Section */}
+                <div className="lg:col-span-2 dashboard-card p-6 flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <Target size={20} className="text-blue-400 drop-shadow-[0_0_6px_rgba(59,130,246,0.5)]" /> Metas Financeiras
+                        </h3>
+                        <button onClick={() => setIsGoalModalOpen(true)} className="p-2 hover:bg-white/[0.06] rounded-xl text-slate-400 hover:text-white transition-colors">
                             <Plus size={18} />
                         </button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
                         {goals.length === 0 ? (
-                            <div className="text-center text-zinc-600 py-6">
+                            <div className="text-center text-slate-500 py-6 text-sm">
                                 Nenhuma meta definida.
                             </div>
                         ) : (
                             goals.map(goal => {
                                 const percentage = Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
                                 return (
-                                    <div key={goal.id} className="bg-[#1a1a1a] p-4 rounded-xl border border-zinc-900 group">
+                                    <div key={goal.id} className="bg-[#101728]/70 p-4 rounded-2xl border border-white/[0.07] group">
                                         <div className="flex justify-between items-start mb-2">
                                             <div>
-                                                <span className="font-medium text-white block">{goal.name}</span>
-                                                <span className="text-xs text-zinc-500">R$ {goal.currentAmount} / {goal.targetAmount}</span>
+                                                <span className="font-semibold text-white block">{goal.name}</span>
+                                                <span className="text-xs text-slate-400">R$ {goal.currentAmount.toLocaleString('pt-BR')} / {goal.targetAmount.toLocaleString('pt-BR')}</span>
                                             </div>
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => handleOpenGoalUpdate(goal.id, 'remove')}
-                                                    className="p-1 hover:bg-zinc-800 rounded text-rose-500"
+                                                    className="p-1.5 hover:bg-rose-500/20 rounded-lg text-rose-400"
                                                     title="Remover valor"
                                                 >
                                                     <Minus size={14} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleOpenGoalUpdate(goal.id, 'add')}
-                                                    className="p-1 hover:bg-zinc-800 rounded text-emerald-500"
+                                                    className="p-1.5 hover:bg-emerald-500/20 rounded-lg text-emerald-400"
                                                     title="Adicionar valor"
                                                 >
                                                     <Plus size={14} />
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                                        <div className="h-2 w-full bg-slate-800/80 rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                                className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(52,211,153,0.4)]"
                                                 style={{ width: `${percentage}%` }}
                                             />
                                         </div>
@@ -549,24 +689,21 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                         )}
                     </div>
                 </div>
-            </div>
 
-            {/* Budgets and Recurring Section */}
-            <div className="contents">
                 {/* Spending Goals (Budgets) */}
-                <div className="lg:order-3 bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
+                <div className="lg:col-span-1 dashboard-card p-6 flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                            <Coins size={20} className="text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.35)]" /> Metas de Gastos
+                            <Coins size={20} className="text-cyan-400 drop-shadow-[0_0_6px_rgba(6,182,212,0.5)]" /> Metas de Gastos
                         </h3>
-                        <button onClick={() => setIsBudgetModalOpen(true)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
+                        <button onClick={() => setIsBudgetModalOpen(true)} className="p-2 hover:bg-white/[0.06] rounded-xl text-slate-400 hover:text-white transition-colors">
                             <Plus size={18} />
                         </button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
                         {budgets.length === 0 ? (
-                            <div className="text-center text-zinc-600 py-6">Nenhuma meta de gasto definida.</div>
+                            <div className="text-center text-slate-500 py-6 text-sm">Nenhuma meta de gasto definida.</div>
                         ) : (
                             budgets.map(budget => {
                                 const spent = filteredTransactions
@@ -575,27 +712,27 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                                 const percentage = Math.min(100, Math.round((spent / budget.limit) * 100));
 
                                 return (
-                                    <div key={budget.id} className="bg-[#1a1a1a] p-4 rounded-xl border border-zinc-900 group">
+                                    <div key={budget.id} className="bg-[#101728]/70 p-4 rounded-2xl border border-white/[0.07] group">
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="font-medium text-white">{budget.category}</span>
+                                            <span className="font-semibold text-white">{budget.category}</span>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-xs text-zinc-500">R$ {spent.toFixed(0)} / {budget.limit}</span>
+                                                <span className="text-xs text-slate-400">R$ {spent.toFixed(0)} / {budget.limit}</span>
                                                 <button
                                                     onClick={() => handleEditBudgetClick(budget)}
-                                                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-white transition-opacity"
+                                                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white transition-opacity"
                                                 >
                                                     <Edit2 size={12} />
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                                        <div className="h-2 w-full bg-slate-800/80 rounded-full overflow-hidden">
                                             <div
-                                                className={`h-full rounded-full transition-all duration-500 ${percentage > 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                                className={`h-full rounded-full transition-all duration-500 ${percentage > 90 ? 'bg-rose-500' : 'bg-gradient-to-r from-blue-500 to-cyan-400'}`}
                                                 style={{ width: `${percentage}%` }}
                                             />
                                         </div>
                                         <div className="mt-1 text-right">
-                                            <span className={`text-xs font-bold ${percentage > 90 ? 'text-red-400' : 'text-emerald-400'}`}>{percentage}%</span>
+                                            <span className={`text-xs font-bold ${percentage > 90 ? 'text-rose-400' : 'text-cyan-400'}`}>{percentage}%</span>
                                         </div>
                                     </div>
                                 );
@@ -603,102 +740,14 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                         )}
                     </div>
                 </div>
-
-                {/* Recurring Expenses */}
-                <div className="lg:order-2 bg-[#111111] border border-zinc-800 rounded-2xl p-6 flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                            <Calendar size={20} className="text-red-400 drop-shadow-[0_0_6px_rgba(248,113,113,0.35)]" /> Despesas Fixas
-                        </h3>
-                        <button onClick={openNewRecurringModal} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
-                            <Plus size={18} />
-                        </button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                        {recurringExpenses.length === 0 ? (
-                            <div className="text-center text-zinc-600 py-6">Nenhuma despesa fixa.</div>
-                        ) : (
-                            recurringExpenses.map(rec => {
-                                // Check if paid this month
-                                const isPaid = rec.lastPaidDate &&
-                                    rec.lastPaidDate.getMonth() === currentDate.getMonth() &&
-                                    rec.lastPaidDate.getFullYear() === currentDate.getFullYear();
-                                const nextDue = getNextDueInfo(rec.dayOfMonth, rec.lastPaidDate);
-
-                                return (
-                                    <div key={rec.id} className="bg-[#1a1a1a] p-3 rounded-lg border border-zinc-900 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 group hover:border-red-900/30 transition-colors">
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-white font-medium">{rec.description}</span>
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase ${rec.type === 'fixed' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'}`}>
-                                                    {rec.type === 'fixed' ? 'Fixa' : 'Variável'}
-                                                </span>
-                                                {rec.installmentsTotal && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 rounded uppercase bg-zinc-800 text-zinc-400">
-                                                        {rec.currentInstallment || 1}/{rec.installmentsTotal}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="text-xs text-zinc-500 flex flex-wrap items-center gap-2 mt-1">
-                                                <span className="inline-flex items-center gap-1 text-zinc-400">
-                                                    <Calendar size={11} className="text-red-400" />
-                                                    {nextDue.formattedDate}
-                                                </span>
-                                                <span>•</span>
-                                                <span>{rec.category}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between sm:justify-end gap-3">
-                                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-red-300 bg-red-500/5 border border-red-500/10 rounded-md px-2 py-1 whitespace-nowrap">
-                                                <Clock3 size={12} />
-                                                {nextDue.countdown}
-                                            </div>
-                                            {rec.amount && <span className="text-sm font-bold text-zinc-300">R$ {rec.amount}</span>}
-                                            {isPaid ? (
-                                                <button
-                                                    onClick={() => handleRecurringClick(rec, !!isPaid)}
-                                                    className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded hover:bg-red-500/10 hover:text-red-500 group/btn transition-colors"
-                                                    title="Desfazer pagamento"
-                                                >
-                                                    <span className="group-hover/btn:hidden">PAGO</span>
-                                                    <span className="hidden group-hover/btn:inline text-[10px]">DESFAZER</span>
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleRecurringClick(rec, !!isPaid)}
-                                                    className="text-xs px-3 py-1.5 rounded transition-colors bg-zinc-800 hover:bg-zinc-700 text-white"
-                                                >
-                                                    Pagar
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => openEditRecurringModal(rec)}
-                                                className="p-1.5 hover:bg-red-500/10 rounded text-zinc-600 hover:text-red-400 transition-colors"
-                                                title="Editar despesa"
-                                            >
-                                                <Edit2 size={14} />
-                                            </button>
-                                            <button
-                                                onClick={() => onDeleteRecurring(rec.id)}
-                                                className="p-1.5 hover:bg-red-500/10 rounded text-zinc-600 hover:text-red-500 transition-colors"
-                                                title="Excluir despesa"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
-            </div>
             </div>
 
             {/* Transaction List */}
-            <div className="bg-[#111111] border border-zinc-800 rounded-2xl p-6">
-                <h3 className="text-lg font-bold text-white mb-6">Transações do Mês</h3>
+            <div className="dashboard-card p-6">
+                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_#60a5fa]" />
+                    Transações do Mês
+                </h3>
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
