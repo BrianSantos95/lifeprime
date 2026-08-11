@@ -58,3 +58,19 @@ export interface DailyTask {
   completed: boolean;
   position: number;
 }
+
+export type ClientPaymentStatus = 'pending' | 'half' | 'paid';
+export type ClientProjectStatus = 'lead' | 'proposal' | 'development' | 'review' | 'delivered';
+
+export interface Client {
+  id: string;
+  name: string;
+  contact?: string;
+  project?: string;
+  amount: number;
+  paymentStatus: ClientPaymentStatus;
+  projectStatus: ClientProjectStatus;
+  followUpDate?: string;
+  notes?: string;
+  createdAt?: string;
+}

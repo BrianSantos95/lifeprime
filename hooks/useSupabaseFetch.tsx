@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Habit, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask } from '../types';
+import { Habit, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask, Client } from '../types';
 import { Circle } from 'lucide-react';
 
 const iconMap: Record<string, any> = {
@@ -24,6 +24,7 @@ export const useSupabaseData = (session: any) => {
     const [budgets, setBudgets] = useState<Budget[]>([]);
     const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
     const [tasks, setTasks] = useState<DailyTask[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
 
     useEffect(() => {
         if (!session) {
@@ -143,6 +144,16 @@ export const useSupabaseData = (session: any) => {
                     setTasks(formattedTasks.sort((a: any, b: any) => a.position - b.position));
                 }
 
+                const { data: clientsData, error: clientsError } = await supabase
+                    .from('clients').select('*').order('created_at', { ascending: false });
+                if (!clientsError && clientsData) setClients(clientsData.map((client: any) => ({
+                    id: client.id, name: client.name, contact: client.contact || '',
+                    project: client.project || '', amount: Number(client.amount) || 0,
+                    paymentStatus: client.payment_status, projectStatus: client.project_status,
+                    followUpDate: client.follow_up_date || undefined, notes: client.notes || '',
+                    createdAt: client.created_at
+                })));
+
             } catch (error) {
                 console.error('Error fetching data:', error);
             } finally {
@@ -161,6 +172,7 @@ export const useSupabaseData = (session: any) => {
         goals, setGoals,
         budgets, setBudgets,
         recurring, setRecurring,
-        tasks, setTasks
+        tasks, setTasks,
+        clients, setClients
     };
 };

@@ -3,6 +3,7 @@ import { Plus, Trash2, CheckCircle2, Circle, X, GripVertical, Pencil, Check } fr
 import {
     DndContext,
     closestCorners,
+    pointerWithin,
     KeyboardSensor,
     PointerSensor,
     TouchSensor,
@@ -12,6 +13,7 @@ import {
     defaultDropAnimationSideEffects,
     DragStartEvent,
     DragEndEvent,
+    CollisionDetection,
     useDroppable,
 } from '@dnd-kit/core';
 import {
@@ -244,6 +246,11 @@ const KanbanColumn = ({ day, tasks, onAddTask, onDeleteTask, onToggleTask, onEdi
     );
 };
 
+const collisionDetectionStrategy: CollisionDetection = (args) => {
+    const pointerCollisions = pointerWithin(args);
+    return pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args);
+};
+
 const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteTask, onToggleTask, onMoveTask, onEditTask }) => {
     const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -303,7 +310,7 @@ const WeeklyKanban: React.FC<WeeklyKanbanProps> = ({ tasks, onAddTask, onDeleteT
 
             <DndContext
                 sensors={sensors}
-                collisionDetection={closestCorners}
+                collisionDetection={collisionDetectionStrategy}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >

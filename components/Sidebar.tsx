@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard,
-  Calendar,
+  BriefcaseBusiness,
   User,
   Activity,
   DollarSign,
@@ -62,8 +62,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onSignOut }) 
           </button>
 
           <button onClick={() => onNavigate('calendar')} className={getButtonClass('calendar')} title="Calendário">
-            <Calendar size={20} className={getIconClass('calendar')} />
+            <BriefcaseBusiness size={20} className={getIconClass('calendar')} />
             <span className="text-sm">Calendário</span>
+            <span className="text-sm absolute left-[52px] bg-[#0b0e18] pr-4">Clientes</span>
             {activePage === 'calendar' && (
               <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_#60a5fa]" />
             )}

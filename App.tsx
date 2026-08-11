@@ -26,7 +26,8 @@ import HabitGrid from './components/HabitGrid';
 import StatsCards from './components/StatsCards';
 import FinanceDashboard from './components/FinanceDashboard';
 import WeeklyKanban from './components/WeeklyKanban';
-import { Habit, ChartDataPoint, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask } from './types';
+import ClientsDashboard from './components/ClientsDashboard';
+import { Habit, ChartDataPoint, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask, Client } from './types';
 
 // Helper to format date keys for storage
 const getDateKey = (habitId: number, date: Date) => {
@@ -59,7 +60,8 @@ const App: React.FC = () => {
     goals: financialGoals, setGoals: setFinancialGoals,
     budgets, setBudgets,
     recurring: recurringExpenses, setRecurring: setRecurringExpenses,
-    tasks: dailyTasks, setTasks: setDailyTasks
+    tasks: dailyTasks, setTasks: setDailyTasks,
+    clients, setClients
   } = useSupabaseData(session);
 
   // --- UI State ---
@@ -961,8 +963,37 @@ const App: React.FC = () => {
     // Simple approach for now:
     setHabitDefs([...otherHabits, ...newOrderedSectionHabits]);
   };
+  const clientPayload = (client: Omit<Client, 'id' | 'createdAt'>) => ({
+    user_id: session.user.id,
+    name: client.name,
+    contact: client.contact || null,
+    project: client.project || null,
+    amount: client.amount,
+    payment_status: client.paymentStatus,
+    project_status: client.projectStatus,
+    follow_up_date: client.followUpDate || null,
+    notes: client.notes || null
+  });
 
+  const handleAddClient = async (client: Omit<Client, 'id' | 'createdAt'>) => {
+    const { data, error } = await supabase.from('clients').insert(clientPayload(client)).select().single();
+    if (error) { console.error(error); alert('Nao foi possivel salvar. Execute a migracao supabase_clients.sql.'); return false; }
+    setClients((current: Client[]) => [{ ...client, id: data.id, createdAt: data.created_at }, ...current]);
+    return true;
+  };
 
+  const handleEditClient = async (id: string, client: Omit<Client, 'id' | 'createdAt'>) => {
+    const { error } = await supabase.from('clients').update(clientPayload(client)).eq('id', id);
+    if (error) { console.error(error); alert('Nao foi possivel atualizar o cliente.'); return false; }
+    setClients((current: Client[]) => current.map(item => item.id === id ? { ...item, ...client } : item));
+    return true;
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    const { error } = await supabase.from('clients').delete().eq('id', id);
+    if (error) { console.error(error); alert('Nao foi possivel excluir o cliente.'); return; }
+    setClients((current: Client[]) => current.filter(item => item.id !== id));
+  };
 
   return (
     <div className="app-shell flex h-screen text-slate-300 font-sans overflow-hidden" >
@@ -1169,7 +1200,8 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-500 animate-in fade-in duration-300">
-            {activePage === 'calendar' && (
+            {activePage === 'calendar' && <ClientsDashboard clients={clients} onAdd={handleAddClient} onEdit={handleEditClient} onDelete={handleDeleteClient} />}
+            {activePage === 'calendar-disabled' && (
               <div className="text-center">
                 <div className="p-4 bg-[#101728]/80 border border-white/[0.08] rounded-3xl mb-4 inline-block shadow-lg">
                   <Calendar size={36} className="text-blue-400" />

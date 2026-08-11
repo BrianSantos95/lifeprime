@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, DollarSign, User } from 'lucide-react';
+import { LayoutDashboard, DollarSign, User, BriefcaseBusiness } from 'lucide-react';
 
 interface MobileNavigationProps {
     activePage: string;
@@ -25,6 +25,10 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ activePage, onNavig
             <button onClick={() => onNavigate('finance')} className={getButtonClass('finance')}>
                 <DollarSign size={20} />
                 <span className="text-[10px]">Finanças</span>
+            </button>
+            <button onClick={() => onNavigate('calendar')} className={getButtonClass('calendar')}>
+                <BriefcaseBusiness size={20} />
+                <span className="text-[10px]">Clientes</span>
             </button>
             <button onClick={() => onNavigate('profile')} className={getButtonClass('profile')}>
                 <User size={20} />
