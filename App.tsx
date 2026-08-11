@@ -36,6 +36,7 @@ const getDateKey = (habitId: number, date: Date) => {
 // ... imports
 import Auth from './components/Auth';
 import { supabase } from './lib/supabase';
+import { parseCurrencyInput } from './lib/currency';
 
 // ... (other imports remain the same)
 
@@ -475,15 +476,15 @@ const App: React.FC = () => {
     else if (incomeKeywords.some(k => lowerText.includes(k))) type = 'income';
 
     // 2. Extract Amount
-    const amountMatch = text.match(/(?:R\$|BRL)?\s?(\d+(?:[.,]\d{1,2})?)/i);
+    const amountMatch = text.match(/(?:R\$|BRL)?\s?(\d[\d.,]*)/i);
     if (amountMatch && amountMatch[1]) {
-      amount = parseFloat(amountMatch[1].replace(',', '.'));
+      amount = parseCurrencyInput(amountMatch[1]);
     } else {
       return null;
     }
 
     // 3. Extract Category/Description (Simplified for brevity)
-    let cleanText = lowerText.replace(/(?:R\$|BRL)?\s?(\d+(?:[.,]\d{1,2})?)/i, '').replace(/[.,!?;:]/g, ' ');
+    let cleanText = lowerText.replace(/(?:R\$|BRL)?\s?(\d[\d.,]*)/i, '').replace(/[.,!?;:]/g, ' ');
     let cleanTextParts = cleanText.split(' ').map(w => w.trim()).filter(word => !stopWords.includes(word) && !expenseKeywords.includes(word) && !incomeKeywords.includes(word) && word.length > 0);
 
     if (cleanTextParts.length > 0) {

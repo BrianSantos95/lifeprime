@@ -113,27 +113,25 @@ export const useSupabaseData = (session: any) => {
                     .order('created_at', { ascending: true });
 
                 if (tasksError) {
-                    const { data: fallbackData } = await supabase
+                    const { data: fallbackData, error: fallbackError } = await supabase
                         .from('daily_tasks')
                         .select('*')
                         .order('created_at', { ascending: true });
-                    tasksData = fallback.data;
-                    tasksError = fallback.error;
+                    tasksData = fallbackData;
+                    tasksError = fallbackError;
                 }
 
                 if (tasksError) throw tasksError;
                 if (tasksData) {
                     const positionsByDay: Record<string, number> = {};
                     let savedOrder: Record<string, { day: string; position: number }> = {};
-                    if (isLegacyTaskSchema) {
-                        try {
-                            savedOrder = JSON.parse(localStorage.getItem(`habitpulse-task-order-${session.user.id}`) || '{}');
-                        } catch {
-                            savedOrder = {};
-                        }
+                    try {
+                        savedOrder = JSON.parse(localStorage.getItem(`habitpulse-task-order-${session.user.id}`) || '{}');
+                    } catch {
+                        savedOrder = {};
                     }
 
-                    const formattedTasks = tasksData.map(task => {
+                    const formattedTasks = tasksData.map((task: any) => {
                         const fallbackPosition = positionsByDay[task.day] ?? 0;
                         positionsByDay[task.day] = fallbackPosition + 1;
                         return {
@@ -142,7 +140,7 @@ export const useSupabaseData = (session: any) => {
                             position: savedOrder[task.id]?.position ?? task.position ?? fallbackPosition
                         };
                     });
-                    setTasks(formattedTasks.sort((a, b) => a.position - b.position));
+                    setTasks(formattedTasks.sort((a: any, b: any) => a.position - b.position));
                 }
 
             } catch (error) {

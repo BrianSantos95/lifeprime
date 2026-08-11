@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid, Legend } from 'recharts';
 import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, Plus, Minus, ChevronLeft, ChevronRight, Target, X, PiggyBank, Calendar, Coins, Edit2, Trash2, Clock3 } from 'lucide-react';
 import { Transaction, FinancialGoal, Budget, RecurringExpense } from '../types';
+import { parseCurrencyInput } from '../lib/currency';
 
 interface FinanceDashboardProps {
     transactions: Transaction[];
@@ -207,12 +208,12 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
 
         onAddTransaction({
             type: transType,
-            amount: parseFloat(transAmount.replace(',', '.')),
+            amount: parseCurrencyInput(transAmount),
             description: transDesc,
             category: transCategory || 'Geral',
             date: new Date(),
             goalId: (transType === 'income' && selectedGoalId) ? selectedGoalId : undefined,
-            goalContribution: (transType === 'income' && selectedGoalId && transGoalContribution) ? parseFloat(transGoalContribution.replace(',', '.')) : undefined
+            goalContribution: (transType === 'income' && selectedGoalId && transGoalContribution) ? parseCurrencyInput(transGoalContribution) : undefined
         });
 
         setTransAmount('');
@@ -229,7 +230,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
 
         onAddGoal({
             name: goalName,
-            targetAmount: parseFloat(goalTarget.replace(',', '.')),
+            targetAmount: parseCurrencyInput(goalTarget),
         });
 
         setGoalName('');
@@ -246,7 +247,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
         e.preventDefault();
         if (!goalUpdateAmount) return;
 
-        const amount = parseFloat(goalUpdateAmount.replace(',', '.'));
+        const amount = parseCurrencyInput(goalUpdateAmount);
         const delta = goalUpdateModal.mode === 'add' ? amount : -amount;
 
         onUpdateGoal(goalUpdateModal.goalId, delta);
@@ -257,7 +258,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     const handleSubmitBudget = (e: React.FormEvent) => {
         e.preventDefault();
         if (!budgetCategory || !budgetLimit) return;
-        onAddBudget({ category: budgetCategory, limit: parseFloat(budgetLimit.replace(',', '.')) });
+        onAddBudget({ category: budgetCategory, limit: parseCurrencyInput(budgetLimit) });
         setBudgetCategory('');
         setBudgetLimit('');
         setIsBudgetModalOpen(false);
@@ -270,7 +271,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             description: recurDesc,
             category: recurCategory,
             type: recurType,
-            amount: recurAmount ? parseFloat(recurAmount.replace(',', '.')) : undefined,
+            amount: recurAmount ? parseCurrencyInput(recurAmount) : undefined,
             dayOfMonth: parseInt(recurDay),
             installmentsTotal: recurInstallments ? parseInt(recurInstallments) : undefined,
             currentInstallment: recurInstallments ? 1 : undefined
@@ -335,7 +336,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     const handleSubmitEditBudget = (e: React.FormEvent) => {
         e.preventDefault();
         if (!editBudgetModal.currentLimit) return;
-        onEditBudget(editBudgetModal.budgetId, parseFloat(editBudgetModal.currentLimit.replace(',', '.')));
+        onEditBudget(editBudgetModal.budgetId, parseCurrencyInput(editBudgetModal.currentLimit));
         setEditBudgetModal({ isOpen: false, budgetId: '', currentLimit: '' });
     };
 
@@ -363,7 +364,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
         onToggleRecurringPay(
             variablePayModal.recurId,
             true,
-            parseFloat(variablePayAmount.replace(',', '.')),
+            parseCurrencyInput(variablePayAmount),
             new Date()
         );
         setVariablePayModal({ isOpen: false, recurId: '', description: '' });
@@ -390,7 +391,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
 
         onEditTransaction(editTransModal.id, {
             description: editTransModal.description,
-            amount: parseFloat(editTransModal.amount.replace(',', '.')),
+            amount: parseCurrencyInput(editTransModal.amount),
             category: editTransModal.category,
             type: editTransModal.type,
             date: new Date(editTransModal.date + 'T12:00:00') // prevent timezone issues
