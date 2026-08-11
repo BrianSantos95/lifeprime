@@ -69,11 +69,28 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: P
     </div>
     <section className="dashboard-card p-5">
       <div className="relative max-w-md mb-5"><Search className="absolute left-4 top-4 text-slate-500" size={16}/><input className={fieldClass + ' !mt-0 !pl-11'} placeholder="Buscar cliente ou projeto..." value={query} onChange={e=>setQuery(e.target.value)}/></div>
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{visible.map(client=><article key={client.id} className="bg-[#0c111e] border border-white/10 rounded-2xl p-4">
-        <div className="flex justify-between"><div><h3 className="font-bold text-white">{client.name}</h3><p className="text-xs text-slate-500">{client.project||'Projeto nao informado'}</p></div><div><button className="p-2" onClick={()=>start(client)}><Edit2 size={15}/></button><button className="p-2 hover:text-rose-400" onClick={()=>confirm('Excluir este cliente?')&&onDelete(client.id)}><Trash2 size={15}/></button></div></div>
-        <div className="flex gap-2 my-4"><span className="tag">{stages[client.projectStatus]}</span><span className="tag">{payments[client.paymentStatus]}</span></div>
-        <div className="border-t border-white/5 pt-3 flex justify-between"><b className="text-white">{money(client.amount)}</b>{client.followUpDate&&<small className={client.followUpDate<=today?'text-amber-400':'text-slate-500'}>Pos: {new Date(client.followUpDate+'T12:00').toLocaleDateString('pt-BR')}</small>}</div>
-      </article>)}</div>
+      <div className="overflow-x-auto rounded-2xl border border-white/10">
+        <table className="w-full min-w-[980px] border-collapse text-left">
+          <thead className="bg-white/[0.035]">
+            <tr className="border-b border-white/10">
+              {['Nome','WhatsApp / contato','Projeto','Valor','Pagamento','Etapa','Follow-up',''].map(title=>
+                <th key={title} className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">{title}</th>)}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/[0.06]">
+            {visible.map(client=><tr key={client.id} className="group bg-[#0c111e]/60 hover:bg-white/[0.025] transition-colors">
+              <td className="px-4 py-4"><p className="font-semibold text-white">{client.name}</p></td>
+              <td className="px-4 py-4 text-sm text-slate-400">{client.contact||'--'}</td>
+              <td className="px-4 py-4 text-sm text-slate-300">{client.project||'Nao informado'}</td>
+              <td className="px-4 py-4 font-bold text-white whitespace-nowrap">{money(client.amount)}</td>
+              <td className="px-4 py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${client.paymentStatus==='paid'?'border-emerald-500/20 bg-emerald-500/10 text-emerald-300':client.paymentStatus==='half'?'border-amber-500/20 bg-amber-500/10 text-amber-300':'border-rose-500/20 bg-rose-500/10 text-rose-300'}`}>{payments[client.paymentStatus]}</span></td>
+              <td className="px-4 py-4 text-sm text-slate-300 whitespace-nowrap">{stages[client.projectStatus]}</td>
+              <td className={`px-4 py-4 text-sm whitespace-nowrap ${client.followUpDate&&client.followUpDate<=today?'text-amber-400':'text-slate-400'}`}>{client.followUpDate?new Date(client.followUpDate+'T12:00').toLocaleDateString('pt-BR'):'--'}</td>
+              <td className="px-3 py-4"><div className="flex justify-end"><button title="Editar" className="p-2 rounded-lg text-slate-500 hover:bg-blue-500/10 hover:text-blue-400" onClick={()=>start(client)}><Edit2 size={15}/></button><button title="Excluir" className="p-2 rounded-lg text-slate-500 hover:bg-rose-500/10 hover:text-rose-400" onClick={()=>confirm('Excluir este cliente?')&&onDelete(client.id)}><Trash2 size={15}/></button></div></td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
       {!visible.length&&<p className="text-center text-slate-500 py-16">Nenhum cliente encontrado.</p>}
     </section>
     {open&&<div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-[#0d1424] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[0_24px_80px_rgba(0,0,0,.7)]">
