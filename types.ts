@@ -68,6 +68,7 @@ export interface Client {
   contact?: string;
   project?: string;
   amount: number;
+  currency: 'BRL' | 'USD' | 'EUR';
   paymentStatus: ClientPaymentStatus;
   projectStatus: ClientProjectStatus;
   followUpDate?: string;

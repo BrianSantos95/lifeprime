@@ -149,6 +149,7 @@ export const useSupabaseData = (session: any) => {
                 if (!clientsError && clientsData) setClients(clientsData.map((client: any) => ({
                     id: client.id, name: client.name, contact: client.contact || '',
                     project: client.project || '', amount: Number(client.amount) || 0,
+                    currency: client.currency || 'BRL',
                     paymentStatus: client.payment_status, projectStatus: client.project_status,
                     followUpDate: client.follow_up_date || undefined, notes: client.notes || '',
                     createdAt: client.created_at

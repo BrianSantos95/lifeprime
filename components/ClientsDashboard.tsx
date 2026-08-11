@@ -19,10 +19,10 @@ const stages: Record<ClientProjectStatus, string> = {
 };
 const blank: Input = {
   name: '', contact: '', project: '', amount: 0, paymentStatus: 'pending',
-  projectStatus: 'lead', followUpDate: '', notes: ''
+  currency: 'BRL', projectStatus: 'lead', followUpDate: '', notes: ''
 };
-const money = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const money = (value: number, currency: Client['currency']) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency });
 const fieldClass = 'mt-2 w-full h-12 rounded-xl border border-white/10 bg-[#090e19] px-4 text-sm text-white placeholder:text-slate-600 outline-none transition-all focus:border-blue-500/70 focus:ring-4 focus:ring-blue-500/10 [color-scheme:dark]';
 const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-slate-400';
 
@@ -33,9 +33,12 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: P
   const [form, setForm] = useState<Input>(blank);
   const [amount, setAmount] = useState('');
   const today = new Date().toISOString().slice(0, 10);
-  const total = clients.reduce((sum, client) => sum + client.amount, 0);
-  const received = clients.reduce((sum, client) =>
-    sum + client.amount * (client.paymentStatus === 'paid' ? 1 : client.paymentStatus === 'half' ? .5 : 0), 0);
+  const totals = (receivedOnly = false) => (['BRL','USD','EUR'] as const)
+    .map(currency => {
+      const value = clients.filter(client => client.currency === currency).reduce((sum, client) =>
+        sum + client.amount * (receivedOnly ? client.paymentStatus === 'paid' ? 1 : client.paymentStatus === 'half' ? .5 : 0 : 1), 0);
+      return value ? money(value, currency) : '';
+    }).filter(Boolean).join(' · ') || money(0, 'BRL');
   const visible = clients.filter(client =>
     [client.name, client.contact, client.project].join(' ').toLowerCase().includes(query.toLowerCase()));
 
@@ -43,7 +46,7 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: P
     setEditing(client?.id || null);
     setForm(client ? {
       name: client.name, contact: client.contact, project: client.project,
-      amount: client.amount, paymentStatus: client.paymentStatus,
+      amount: client.amount, currency: client.currency || 'BRL', paymentStatus: client.paymentStatus,
       projectStatus: client.projectStatus, followUpDate: client.followUpDate || '',
       notes: client.notes
     } : blank);
@@ -65,7 +68,7 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: P
       <button onClick={() => start()} className="btn-glow-primary px-5 h-11 rounded-2xl text-white font-bold flex items-center gap-2"><Plus size={18}/>Novo cliente</button>
     </header>
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-      {[['Clientes',clients.length],['Contratado',money(total)],['Recebido',money(received)],['Follow-ups',clients.filter(c=>c.followUpDate&&c.followUpDate<=today).length]].map(([label,value])=><div className="dashboard-card p-4" key={label}><p className="text-xs text-slate-500">{label}</p><p className="text-xl font-extrabold text-white truncate">{value}</p></div>)}
+      {[['Clientes',clients.length],['Contratado',totals()],['Recebido',totals(true)],['Follow-ups',clients.filter(c=>c.followUpDate&&c.followUpDate<=today).length]].map(([label,value])=><div className="dashboard-card p-4" key={label}><p className="text-xs text-slate-500">{label}</p><p className="text-lg font-extrabold text-white">{value}</p></div>)}
     </div>
     <section className="dashboard-card p-5">
       <div className="relative max-w-md mb-5"><Search className="absolute left-4 top-4 text-slate-500" size={16}/><input className={fieldClass + ' !mt-0 !pl-11'} placeholder="Buscar cliente ou projeto..." value={query} onChange={e=>setQuery(e.target.value)}/></div>
@@ -82,7 +85,7 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: P
               <td className="px-4 py-4"><p className="font-semibold text-white">{client.name}</p></td>
               <td className="px-4 py-4 text-sm text-slate-400">{client.contact||'--'}</td>
               <td className="px-4 py-4 text-sm text-slate-300">{client.project||'Nao informado'}</td>
-              <td className="px-4 py-4 font-bold text-white whitespace-nowrap">{money(client.amount)}</td>
+              <td className="px-4 py-4 font-bold text-white whitespace-nowrap">{money(client.amount, client.currency)}</td>
               <td className="px-4 py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${client.paymentStatus==='paid'?'border-emerald-500/20 bg-emerald-500/10 text-emerald-300':client.paymentStatus==='half'?'border-amber-500/20 bg-amber-500/10 text-amber-300':'border-rose-500/20 bg-rose-500/10 text-rose-300'}`}>{payments[client.paymentStatus]}</span></td>
               <td className="px-4 py-4 text-sm text-slate-300 whitespace-nowrap">{stages[client.projectStatus]}</td>
               <td className={`px-4 py-4 text-sm whitespace-nowrap ${client.followUpDate&&client.followUpDate<=today?'text-amber-400':'text-slate-400'}`}>{client.followUpDate?new Date(client.followUpDate+'T12:00').toLocaleDateString('pt-BR'):'--'}</td>
@@ -99,7 +102,14 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: P
         <label className={labelClass}>Nome do cliente<input required className={fieldClass} placeholder="Nome ou empresa" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>
         <label className={labelClass}>Contato<input className={fieldClass} placeholder="WhatsApp ou e-mail" value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})}/></label>
         <label className={labelClass}>Projeto<input className={fieldClass} placeholder="Ex: Landing page" value={form.project} onChange={e=>setForm({...form,project:e.target.value})}/></label>
-        <label className={labelClass}>Valor total<input required className={fieldClass} inputMode="decimal" placeholder="Ex: 2.500,00" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
+        <div className="grid grid-cols-[1fr_120px] gap-3">
+          <label className={labelClass}>Valor total<input required className={fieldClass} inputMode="decimal" placeholder="Ex: 2.500,00" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
+          <label className={labelClass}>Moeda<select className={fieldClass + ' px-3'} value={form.currency} onChange={e=>setForm({...form,currency:e.target.value as Client['currency']})}>
+            <option className="bg-[#0d1424]" value="BRL">R$ Real</option>
+            <option className="bg-[#0d1424]" value="USD">$ Dolar</option>
+            <option className="bg-[#0d1424]" value="EUR">EUR Euro</option>
+          </select></label>
+        </div>
         <label className={labelClass}>Pagamento<select className={fieldClass} value={form.paymentStatus} onChange={e=>setForm({...form,paymentStatus:e.target.value as ClientPaymentStatus})}>{Object.entries(payments).map(([value,label])=><option className="bg-[#0d1424]" key={value} value={value}>{label}</option>)}</select></label>
         <label className={labelClass}>Etapa do projeto<select className={fieldClass} value={form.projectStatus} onChange={e=>setForm({...form,projectStatus:e.target.value as ClientProjectStatus})}>{Object.entries(stages).map(([value,label])=><option className="bg-[#0d1424]" key={value} value={value}>{label}</option>)}</select></label>
         <label className={labelClass}>Data de follow-up<input type="date" className={fieldClass} value={form.followUpDate} onChange={e=>setForm({...form,followUpDate:e.target.value})}/></label>

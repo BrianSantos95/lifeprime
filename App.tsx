@@ -969,6 +969,7 @@ const App: React.FC = () => {
     contact: client.contact || null,
     project: client.project || null,
     amount: client.amount,
+    currency: client.currency,
     payment_status: client.paymentStatus,
     project_status: client.projectStatus,
     follow_up_date: client.followUpDate || null,

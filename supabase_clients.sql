@@ -5,6 +5,7 @@ create table if not exists clients (
   contact text,
   project text,
   amount numeric not null default 0,
+  currency text not null default 'BRL' check (currency in ('BRL', 'USD', 'EUR')),
   payment_status text not null default 'pending' check (payment_status in ('pending', 'half', 'paid')),
   project_status text not null default 'lead' check (project_status in ('lead', 'proposal', 'development', 'review', 'delivered')),
   follow_up_date date,
