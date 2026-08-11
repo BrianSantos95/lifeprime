@@ -23,6 +23,8 @@ const blank: Input = {
 };
 const money = (value: number) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fieldClass = 'mt-2 w-full h-12 rounded-xl border border-white/10 bg-[#090e19] px-4 text-sm text-white placeholder:text-slate-600 outline-none transition-all focus:border-blue-500/70 focus:ring-4 focus:ring-blue-500/10 [color-scheme:dark]';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-slate-400';
 
 export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: Props) {
   const [query, setQuery] = useState('');
@@ -66,7 +68,7 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: P
       {[['Clientes',clients.length],['Contratado',money(total)],['Recebido',money(received)],['Follow-ups',clients.filter(c=>c.followUpDate&&c.followUpDate<=today).length]].map(([label,value])=><div className="dashboard-card p-4" key={label}><p className="text-xs text-slate-500">{label}</p><p className="text-xl font-extrabold text-white truncate">{value}</p></div>)}
     </div>
     <section className="dashboard-card p-5">
-      <div className="relative max-w-md mb-5"><Search className="absolute left-3 top-3 text-slate-500" size={16}/><input className="field !mt-0 !pl-9" placeholder="Buscar cliente ou projeto..." value={query} onChange={e=>setQuery(e.target.value)}/></div>
+      <div className="relative max-w-md mb-5"><Search className="absolute left-4 top-4 text-slate-500" size={16}/><input className={fieldClass + ' !mt-0 !pl-11'} placeholder="Buscar cliente ou projeto..." value={query} onChange={e=>setQuery(e.target.value)}/></div>
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">{visible.map(client=><article key={client.id} className="bg-[#0c111e] border border-white/10 rounded-2xl p-4">
         <div className="flex justify-between"><div><h3 className="font-bold text-white">{client.name}</h3><p className="text-xs text-slate-500">{client.project||'Projeto nao informado'}</p></div><div><button className="p-2" onClick={()=>start(client)}><Edit2 size={15}/></button><button className="p-2 hover:text-rose-400" onClick={()=>confirm('Excluir este cliente?')&&onDelete(client.id)}><Trash2 size={15}/></button></div></div>
         <div className="flex gap-2 my-4"><span className="tag">{stages[client.projectStatus]}</span><span className="tag">{payments[client.paymentStatus]}</span></div>
@@ -74,18 +76,21 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: P
       </article>)}</div>
       {!visible.length&&<p className="text-center text-slate-500 py-16">Nenhum cliente encontrado.</p>}
     </section>
-    {open&&<div className="fixed inset-0 z-[70] bg-black/75 flex items-center justify-center p-4"><div className="bg-[#0e1424] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-      <div className="p-5 border-b border-white/10 flex justify-between"><b className="text-white">{editing?'Editar':'Novo'} cliente</b><button onClick={()=>setOpen(false)}><X/></button></div>
-      <form onSubmit={submit} className="p-5 grid md:grid-cols-2 gap-4">
-        <label className="text-xs text-slate-400">Nome<input required className="field" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>
-        <label className="text-xs text-slate-400">Contato<input className="field" value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})}/></label>
-        <label className="text-xs text-slate-400">Projeto<input className="field" value={form.project} onChange={e=>setForm({...form,project:e.target.value})}/></label>
-        <label className="text-xs text-slate-400">Valor<input required className="field" inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
-        <label className="text-xs text-slate-400">Pagamento<select className="field" value={form.paymentStatus} onChange={e=>setForm({...form,paymentStatus:e.target.value as ClientPaymentStatus})}>{Object.entries(payments).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-        <label className="text-xs text-slate-400">Etapa<select className="field" value={form.projectStatus} onChange={e=>setForm({...form,projectStatus:e.target.value as ClientProjectStatus})}>{Object.entries(stages).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-        <label className="text-xs text-slate-400">Follow-up<input type="date" className="field" value={form.followUpDate} onChange={e=>setForm({...form,followUpDate:e.target.value})}/></label>
-        <label className="text-xs text-slate-400 md:col-span-2">Observacoes<textarea className="field min-h-20" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label>
-        <div className="md:col-span-2 flex justify-end"><button className="btn-glow-primary px-5 py-2.5 rounded-xl text-white font-bold">Salvar cliente</button></div>
+    {open&&<div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-[#0d1424] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[0_24px_80px_rgba(0,0,0,.7)]">
+      <div className="px-6 py-5 border-b border-white/10 flex justify-between items-center"><div><b className="text-lg text-white">{editing?'Editar':'Novo'} cliente</b><p className="text-xs text-slate-500 mt-1">Preencha as informacoes essenciais do projeto</p></div><button className="p-2 rounded-xl text-slate-500 hover:bg-white/5 hover:text-white" onClick={()=>setOpen(false)}><X size={20}/></button></div>
+      <form onSubmit={submit} className="p-6 grid md:grid-cols-2 gap-x-5 gap-y-5">
+        <label className={labelClass}>Nome do cliente<input required className={fieldClass} placeholder="Nome ou empresa" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>
+        <label className={labelClass}>Contato<input className={fieldClass} placeholder="WhatsApp ou e-mail" value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})}/></label>
+        <label className={labelClass}>Projeto<input className={fieldClass} placeholder="Ex: Landing page" value={form.project} onChange={e=>setForm({...form,project:e.target.value})}/></label>
+        <label className={labelClass}>Valor total<input required className={fieldClass} inputMode="decimal" placeholder="Ex: 2.500,00" value={amount} onChange={e=>setAmount(e.target.value)}/></label>
+        <label className={labelClass}>Pagamento<select className={fieldClass} value={form.paymentStatus} onChange={e=>setForm({...form,paymentStatus:e.target.value as ClientPaymentStatus})}>{Object.entries(payments).map(([value,label])=><option className="bg-[#0d1424]" key={value} value={value}>{label}</option>)}</select></label>
+        <label className={labelClass}>Etapa do projeto<select className={fieldClass} value={form.projectStatus} onChange={e=>setForm({...form,projectStatus:e.target.value as ClientProjectStatus})}>{Object.entries(stages).map(([value,label])=><option className="bg-[#0d1424]" key={value} value={value}>{label}</option>)}</select></label>
+        <label className={labelClass}>Data de follow-up<input type="date" className={fieldClass} value={form.followUpDate} onChange={e=>setForm({...form,followUpDate:e.target.value})}/></label>
+        <label className={labelClass + ' md:col-span-2'}>Observacoes<textarea className={fieldClass + ' min-h-28 resize-y py-3'} placeholder="Pendencias, preferencias e proximos passos..." value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label>
+        <div className="md:col-span-2 flex justify-end gap-3 border-t border-white/5 pt-5 mt-1">
+          <button type="button" onClick={()=>setOpen(false)} className="px-5 py-3 rounded-xl text-sm font-semibold text-slate-400 hover:bg-white/5 hover:text-white">Cancelar</button>
+          <button className="btn-glow-primary min-w-40 px-6 py-3 rounded-xl text-white font-bold">Salvar cliente</button>
+        </div>
       </form>
     </div></div>}
   </div>;
