@@ -11,7 +11,7 @@ export interface Habit {
 
 export interface ChartDataPoint {
   day: number;
-  percentage: number;
+  percentage: number | null;
 }
 
 export interface Transaction {

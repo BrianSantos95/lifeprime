@@ -867,19 +867,34 @@ const App: React.FC = () => {
   }, [currentMonthHabits]);
 
   const chartData: ChartDataPoint[] = useMemo(() => {
+    const viewedMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const elapsedDays = viewedMonthStart < currentMonthStart
+      ? daysInMonth
+      : viewedMonthStart.getTime() === currentMonthStart.getTime()
+        ? Math.max(today.getDate() - 1, 0)
+        : 0;
+
+    let completedSoFar = 0;
+
     return dayLabels.map((day, dayIndex) => {
       const completedCount = currentMonthHabits.reduce((acc, habit) => acc + (habit.completions[dayIndex] ? 1 : 0), 0);
+      completedSoFar += completedCount;
+
       return {
         day,
-        percentage: currentMonthHabits.length > 0 ? (completedCount / currentMonthHabits.length) * 100 : 0
+        percentage: day <= elapsedDays && currentMonthHabits.length > 0
+          ? (completedSoFar / (currentMonthHabits.length * day)) * 100
+          : null
       };
     });
-  }, [currentMonthHabits, dayLabels]);
+  }, [currentMonthHabits, currentDate, dayLabels, daysInMonth, today]);
 
   const monthAverage = useMemo(() => {
-    const sum = chartData.reduce((a, b) => a + b.percentage, 0);
-    return chartData.length > 0 ? sum / chartData.length : 0;
-  }, [chartData]);
+    if (currentMonthHabits.length === 0) return 0;
+    const latestRate = [...chartData].reverse().find(point => point.percentage !== null)?.percentage;
+    return latestRate ?? 100;
+  }, [chartData, currentMonthHabits.length]);
 
   // Statistics
   const todayCompletedCount = currentMonthHabits.reduce((acc, h) => {
@@ -888,39 +903,29 @@ const App: React.FC = () => {
     return acc + (h.completions[today.getDate() - 1] ? 1 : 0);
   }, 0);
 
-  const currentStreak = useMemo(() => {
-    let streak = 0;
-    const checkDate = new Date(); // Start from today
+  const totalCompleteDays = useMemo(() => {
+    if (habitDefs.length === 0) return 0;
 
-    // Check up to 365 days back
-    for (let i = 0; i < 365; i++) {
-      // Check if all habits are completed for this date
-      const allCompleted = habitDefs.length > 0 && habitDefs.every(h => {
-        const key = getDateKey(h.id, checkDate);
-        return completionsMap[key];
-      });
+    const todayDate = new Date();
+    todayDate.setHours(23, 59, 59, 999);
+    const firstHabitPrefix = `${habitDefs[0].id}-`;
 
-      if (allCompleted) {
-        streak++;
-      } else {
-        // If it's today (i===0) and not complete, we just don't count it yet, 
-        // but we check yesterday to keep the streak from previous days.
-        // If it's a past day and not complete, streak is broken.
-        if (i !== 0) {
-          break;
-        }
-      }
+    return Object.keys(completionsMap).reduce((total, key) => {
+      if (!completionsMap[key] || !key.startsWith(firstHabitPrefix)) return total;
 
-      // Go back one day
-      checkDate.setDate(checkDate.getDate() - 1);
-    }
-    return streak;
+      const dateParts = key.slice(firstHabitPrefix.length).split('-').map(Number);
+      if (dateParts.length !== 3 || dateParts.some(Number.isNaN)) return total;
+
+      const [year, month, day] = dateParts;
+      const completionDate = new Date(year, month, day);
+      if (completionDate > todayDate) return total;
+
+      const allCompleted = habitDefs.every(habit => completionsMap[getDateKey(habit.id, completionDate)]);
+      return total + (allCompleted ? 1 : 0);
+    }, 0);
   }, [habitDefs, completionsMap]);
 
-  const totalPossible = currentMonthHabits.length * daysInMonth;
-  const globalSuccessRate = totalPossible > 0
-    ? Math.round((currentMonthHabits.reduce((acc, h) => acc + h.completions.filter(Boolean).length, 0) / totalPossible) * 100)
-    : 0;
+  const globalSuccessRate = Math.round(monthAverage);
 
   if (authLoading) {
     return (
@@ -1056,7 +1061,7 @@ const App: React.FC = () => {
               </header>
 
               <StatsCards
-                streak={currentStreak}
+                completeDays={totalCompleteDays}
                 todayCompleted={isCurrentMonth ? todayCompletedCount : 0}
                 totalHabits={habitDefs.length}
                 successRate={globalSuccessRate}

@@ -32,7 +32,7 @@ const getDateForDueDay = (year: number, month: number, dueDay: number) => {
 
 const getNextDueInfo = (dueDay: number, lastPaidDate?: Date) => {
     if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) {
-        return { countdown: 'Defina o vencimento', formattedDate: 'Data não definida' };
+        return { countdown: 'Defina o vencimento', formattedDate: 'Data não definida', daysRemaining: Number.POSITIVE_INFINITY };
     }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -58,6 +58,7 @@ const getNextDueInfo = (dueDay: number, lastPaidDate?: Date) => {
 
     return {
         countdown,
+        daysRemaining,
         formattedDate: dueDate.toLocaleDateString('pt-BR', {
             day: '2-digit',
             month: 'short',
@@ -175,6 +176,14 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             { balance: 0, totalIncome: 0, totalExpense: 0 }
         );
     }, [filteredTransactions]);
+
+    const sortedRecurringExpenses = useMemo(() => {
+        return [...recurringExpenses].sort((a, b) => {
+            const daysUntilA = getNextDueInfo(a.dayOfMonth, a.lastPaidDate).daysRemaining;
+            const daysUntilB = getNextDueInfo(b.dayOfMonth, b.lastPaidDate).daysRemaining;
+            return daysUntilA - daysUntilB;
+        });
+    }, [recurringExpenses]);
 
     const chartData = useMemo(() => {
         // Daily aggregation for the current month
@@ -550,7 +559,7 @@ const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                         {recurringExpenses.length === 0 ? (
                             <div className="text-center text-slate-500 py-6 text-sm">Nenhuma despesa fixa.</div>
                         ) : (
-                            recurringExpenses.map(rec => {
+                            sortedRecurringExpenses.map(rec => {
                                 const isPaid = rec.lastPaidDate &&
                                     rec.lastPaidDate.getMonth() === currentDate.getMonth() &&
                                     rec.lastPaidDate.getFullYear() === currentDate.getFullYear();

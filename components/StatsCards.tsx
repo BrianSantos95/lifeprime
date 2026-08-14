@@ -2,16 +2,16 @@ import React from 'react';
 import { Activity, Calendar, Zap, MoreHorizontal, TrendingUp } from 'lucide-react';
 
 interface StatsCardsProps {
-  streak: number;
+  completeDays: number;
   todayCompleted: number;
   totalHabits: number;
   successRate: number;
 }
 
-const StatsCards: React.FC<StatsCardsProps> = ({ streak, todayCompleted, totalHabits, successRate }) => {
+const StatsCards: React.FC<StatsCardsProps> = ({ completeDays, todayCompleted, totalHabits, successRate }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      {/* Card 1: Streak */}
+      {/* Card 1: Complete days */}
       <div className="dashboard-card p-5 relative overflow-hidden group">
         <div className="flex justify-between items-start mb-3">
           <div className="w-11 h-11 bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.2)]">
@@ -19,14 +19,14 @@ const StatsCards: React.FC<StatsCardsProps> = ({ streak, todayCompleted, totalHa
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full badge-glow-green text-xs font-semibold">
             <TrendingUp size={12} />
-            <span>+12%</span>
+            <span>Total</span>
           </div>
         </div>
         <div>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Sequência Ativa</p>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Dias 100% completos</p>
           <div className="flex items-baseline gap-2">
-            <h4 className="text-3xl font-extrabold tracking-tight text-white">{streak}</h4>
-            <span className="text-sm font-semibold text-amber-400">Dias em alta</span>
+            <h4 className="text-3xl font-extrabold tracking-tight text-white">{completeDays}</h4>
+            <span className="text-sm font-semibold text-amber-400">{completeDays === 1 ? 'dia completo' : 'dias completos'}</span>
           </div>
         </div>
       </div>
