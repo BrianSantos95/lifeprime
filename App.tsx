@@ -976,6 +976,9 @@ const App: React.FC = () => {
     amount: client.amount,
     currency: client.currency,
     payment_status: client.paymentStatus,
+    payment_method: client.paymentMethod,
+    paid_amount: client.paidAmount || 0,
+    payment_date: client.paymentDate || null,
     project_status: client.projectStatus,
     page_count: client.pageCount || 1,
     started_at: client.startedAt || null,
@@ -983,10 +986,32 @@ const App: React.FC = () => {
     notes: client.notes || null
   });
 
+  const syncClientPayment = async (clientId: string, client: Omit<Client, 'id' | 'createdAt'>) => {
+    const { data: existing } = await supabase.from('transactions').select('id').eq('client_id', clientId).maybeSingle();
+    if (client.paidAmount <= 0 && !existing?.id) return true;
+    const transactionPayload = {
+      user_id: session.user.id,
+      client_id: clientId,
+      type: 'income',
+      amount: client.paidAmount,
+      category: 'Clientes',
+      description: `${client.name} · ${client.project || 'Projeto'} · ${client.paymentMethod === 'pix' ? 'Pix' : 'Cartão'} · ${client.currency}`,
+      date: new Date(`${client.paymentDate || new Date().toISOString().slice(0, 10)}T12:00:00`).toISOString()
+    };
+    const query = existing?.id
+      ? supabase.from('transactions').update(transactionPayload).eq('id', existing.id)
+      : supabase.from('transactions').insert(transactionPayload);
+    const { data, error } = await query.select().single();
+    if (error) { console.error(error); alert('Cliente salvo, mas não foi possível sincronizar o recebimento com o Financeiro.'); return false; }
+    const transaction = { ...data, date: new Date(data.date) } as Transaction;
+    setTransactions(current => existing?.id ? current.map(item => item.id === existing.id ? transaction : item) : [transaction, ...current]);
+    return true;
+  };
   const handleAddClient = async (client: Omit<Client, 'id' | 'createdAt'>) => {
     const { data, error } = await supabase.from('clients').insert(clientPayload(client)).select().single();
     if (error) { console.error(error); alert('Nao foi possivel salvar. Execute a migracao supabase_clients.sql.'); return false; }
     setClients((current: Client[]) => [{ ...client, id: data.id, createdAt: data.created_at }, ...current]);
+    await syncClientPayment(data.id, client);
     return true;
   };
 
@@ -994,6 +1019,7 @@ const App: React.FC = () => {
     const { error } = await supabase.from('clients').update(clientPayload(client)).eq('id', id);
     if (error) { console.error(error); alert('Nao foi possivel atualizar o cliente.'); return false; }
     setClients((current: Client[]) => current.map(item => item.id === id ? { ...item, ...client } : item));
+    await syncClientPayment(id, client);
     return true;
   };
 

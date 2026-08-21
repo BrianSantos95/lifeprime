@@ -60,6 +60,7 @@ export interface DailyTask {
 }
 
 export type ClientPaymentStatus = 'pending' | 'half' | 'paid';
+export type ClientPaymentMethod = 'pix' | 'card';
 export type ClientProjectStatus = 'awaiting_info' | 'started' | 'review' | 'delivered';
 
 export interface Client {
@@ -70,6 +71,9 @@ export interface Client {
   amount: number;
   currency: 'BRL' | 'USD' | 'EUR';
   paymentStatus: ClientPaymentStatus;
+  paymentMethod: ClientPaymentMethod;
+  paidAmount: number;
+  paymentDate?: string;
   projectStatus: ClientProjectStatus;
   pageCount: number;
   startedAt?: string;
