@@ -1206,7 +1206,7 @@ const App: React.FC = () => {
             />
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500 animate-in fade-in duration-300">
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col items-center justify-center text-slate-500 animate-in fade-in duration-300">
             {activePage === 'calendar' && <ClientsDashboard clients={clients} onAdd={handleAddClient} onEdit={handleEditClient} onDelete={handleDeleteClient} />}
             {activePage === 'calendar-disabled' && (
               <div className="text-center">
