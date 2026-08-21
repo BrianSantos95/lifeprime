@@ -977,7 +977,8 @@ const App: React.FC = () => {
     currency: client.currency,
     payment_status: client.paymentStatus,
     project_status: client.projectStatus,
-    follow_up_date: client.followUpDate || null,
+    page_count: client.pageCount || 1,
+    delivered_at: client.deliveredAt || null,
     notes: client.notes || null
   });
 
@@ -1378,4 +1379,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

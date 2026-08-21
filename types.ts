@@ -71,7 +71,8 @@ export interface Client {
   currency: 'BRL' | 'USD' | 'EUR';
   paymentStatus: ClientPaymentStatus;
   projectStatus: ClientProjectStatus;
-  followUpDate?: string;
+  pageCount: number;
+  deliveredAt?: string;
   notes?: string;
   createdAt?: string;
 }
