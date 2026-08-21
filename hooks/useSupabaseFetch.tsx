@@ -152,6 +152,7 @@ export const useSupabaseData = (session: any) => {
                     currency: client.currency || 'BRL',
                     paymentStatus: client.payment_status, projectStatus: client.project_status,
                     pageCount: Number(client.page_count) || 1,
+                    startedAt: client.started_at || undefined,
                     deliveredAt: client.delivered_at || undefined, notes: client.notes || '',
                     createdAt: client.created_at
                 })));

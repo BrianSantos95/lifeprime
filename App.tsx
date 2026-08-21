@@ -978,6 +978,7 @@ const App: React.FC = () => {
     payment_status: client.paymentStatus,
     project_status: client.projectStatus,
     page_count: client.pageCount || 1,
+    started_at: client.startedAt || null,
     delivered_at: client.deliveredAt || null,
     notes: client.notes || null
   });
