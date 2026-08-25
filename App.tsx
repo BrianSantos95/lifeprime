@@ -987,24 +987,29 @@ const App: React.FC = () => {
   });
 
   const syncClientPayment = async (clientId: string, client: Omit<Client, 'id' | 'createdAt'>) => {
-    const { data: existing } = await supabase.from('transactions').select('id').eq('client_id', clientId).maybeSingle();
-    if (client.paidAmount <= 0 && !existing?.id) return true;
+    const { data: existingPayments, error: fetchError } = await supabase
+      .from('transactions')
+      .select('id, amount')
+      .eq('client_id', clientId);
+    if (fetchError) { console.error(fetchError); return false; }
+
+    const alreadyReceived = (existingPayments || []).reduce((sum, payment) => sum + Number(payment.amount), 0);
+    const amountToRegister = Number((client.paidAmount - alreadyReceived).toFixed(2));
+    if (amountToRegister <= 0) return true;
+
     const transactionPayload = {
       user_id: session.user.id,
       client_id: clientId,
       type: 'income',
-      amount: client.paidAmount,
+      amount: amountToRegister,
       category: 'Clientes',
       description: `${client.name} · ${client.project || 'Projeto'} · ${client.paymentMethod === 'pix' ? 'Pix' : 'Cartão'} · ${client.currency}`,
       date: new Date(`${client.paymentDate || new Date().toISOString().slice(0, 10)}T12:00:00`).toISOString()
     };
-    const query = existing?.id
-      ? supabase.from('transactions').update(transactionPayload).eq('id', existing.id)
-      : supabase.from('transactions').insert(transactionPayload);
-    const { data, error } = await query.select().single();
+    const { data, error } = await supabase.from('transactions').insert(transactionPayload).select().single();
     if (error) { console.error(error); alert('Cliente salvo, mas não foi possível sincronizar o recebimento com o Financeiro.'); return false; }
     const transaction = { ...data, date: new Date(data.date) } as Transaction;
-    setTransactions(current => existing?.id ? current.map(item => item.id === existing.id ? transaction : item) : [transaction, ...current]);
+    setTransactions(current => [transaction, ...current]);
     return true;
   };
   const handleAddClient = async (client: Omit<Client, 'id' | 'createdAt'>) => {

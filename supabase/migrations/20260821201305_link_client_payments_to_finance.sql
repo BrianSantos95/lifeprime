@@ -14,5 +14,7 @@ alter table public.clients
 
 alter table public.transactions
   add column if not exists client_id uuid references public.clients(id) on delete set null;
-create unique index if not exists transactions_client_id_unique
+-- Um cliente pode pagar em datas diferentes (entrada + saldo, por exemplo).
+drop index if exists public.transactions_client_id_unique;
+create index if not exists transactions_client_id_idx
   on public.transactions(client_id) where client_id is not null;
