@@ -991,7 +991,7 @@ const App: React.FC = () => {
       .from('transactions')
       .select('id, amount')
       .eq('client_id', clientId);
-    if (fetchError) { console.error(fetchError); return false; }
+    if (fetchError) { console.error(fetchError); alert('Não foi possível consultar os recebimentos deste cliente. Tente novamente.'); return false; }
 
     const alreadyReceived = (existingPayments || []).reduce((sum, payment) => sum + Number(payment.amount), 0);
     const amountToRegister = Number((client.paidAmount - alreadyReceived).toFixed(2));
@@ -1024,8 +1024,7 @@ const App: React.FC = () => {
     const { error } = await supabase.from('clients').update(clientPayload(client)).eq('id', id);
     if (error) { console.error(error); alert('Nao foi possivel atualizar o cliente.'); return false; }
     setClients((current: Client[]) => current.map(item => item.id === id ? { ...item, ...client } : item));
-    await syncClientPayment(id, client);
-    return true;
+    return syncClientPayment(id, client);
   };
 
   const handleDeleteClient = async (id: string) => {
