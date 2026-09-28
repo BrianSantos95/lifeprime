@@ -1,114 +1,209 @@
-import React, { useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Edit2, Gauge, Plus, Search, Target, Trash2, TrendingUp, X } from 'lucide-react';
-import { Client, ClientPaymentMethod, ClientPaymentStatus, ClientProjectStatus } from '../types';
-import { parseCurrencyInput } from '../lib/currency';
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays, ChevronLeft, ChevronRight, Gauge, Plus, Target, TrendingUp } from 'lucide-react';
+import { Client } from '../types';
+import ClientFormModal, { ClientInput } from './clients/ClientFormModal';
+import ClientPortfolio from './clients/ClientPortfolio';
 
-type Input = Omit<Client, 'id' | 'createdAt'>;
-type PaymentMode = 'none' | 'half' | 'full' | 'custom';
-interface Props { clients: Client[]; onAdd: (client: Input) => Promise<boolean>; onEdit: (id: string, client: Input) => Promise<boolean>; onDelete: (id: string) => Promise<void>; }
-const payments: Record<ClientPaymentStatus, string> = { pending: 'Não pago', half: 'Pagamento parcial', paid: '100% pago' };
-const stages: Record<ClientProjectStatus, string> = { awaiting_info: 'Aguardando informações', started: 'Iniciado', review: 'Em revisão', delivered: 'Entregue' };
-const blank: Input = { name: '', contact: '', project: '', amount: 0, paymentStatus: 'pending', paymentMethod: 'pix', paidAmount: 0, paymentDate: '', currency: 'BRL', projectStatus: 'awaiting_info', pageCount: 1, startedAt: '', deliveredAt: '', notes: '' };
-const money = (value: number, currency: Client['currency']) => value.toLocaleString('pt-BR', { style: 'currency', currency });
-const fieldClass = 'mt-2 w-full h-12 rounded-xl border border-white/10 bg-[#090e19] px-4 text-sm text-white placeholder:text-slate-600 outline-none transition-all focus:border-blue-500/70 focus:ring-4 focus:ring-blue-500/10 [color-scheme:dark]';
+interface ClientsDashboardProps {
+  clients: Client[];
+  onAdd: (client: ClientInput) => Promise<boolean>;
+  onEdit: (id: string, client: ClientInput) => Promise<boolean>;
+  onDelete: (id: string) => Promise<void>;
+}
+
+const currencies = ['BRL', 'USD', 'EUR'] as const;
+const fieldClass = 'mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#090e19] px-4 text-sm text-white outline-none transition-all focus:border-blue-500/70 focus:ring-4 focus:ring-blue-500/10 [color-scheme:dark]';
 const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-slate-400';
-const monthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+const monthKey = (date: Date) => date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
 const dateInMonth = (date: string | undefined, key: string) => Boolean(date && date.slice(0, 7) === key);
+const storedGoal = (key: string) => Math.max(1, Number(localStorage.getItem(key)) || 20);
+const money = (value: number, currency: Client['currency']) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency });
 
-export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: Props) {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState<Input>(blank);
-  const [amount, setAmount] = useState('');
-  const [paidAmount, setPaidAmount] = useState('');
-  const [paymentDate, setPaymentDate] = useState('');
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>('full');
+export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: ClientsDashboardProps) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client>();
   const [selectedMonth, setSelectedMonth] = useState(() => monthKey(new Date()));
-  const goalKey = `habitpulse-client-page-goal-${selectedMonth}`;
-  const [goalRefresh, setGoalRefresh] = useState(0);
-  const goal = Number(localStorage.getItem(goalKey)) || 20;
-  void goalRefresh;
+  const goalKey = 'habitpulse-client-page-goal-' + selectedMonth;
+  const [goal, setGoal] = useState(() => storedGoal(goalKey));
+
+  useEffect(() => setGoal(storedGoal(goalKey)), [goalKey]);
 
   const metrics = useMemo(() => {
-    const delivered = clients.filter(c => c.projectStatus === 'delivered' && dateInMonth(c.deliveredAt || c.createdAt, selectedMonth));
-    const created = clients.filter(c => dateInMonth(c.createdAt, selectedMonth));
-    const pages = delivered.reduce((sum, c) => sum + (c.pageCount || 1), 0);
+    const delivered = clients.filter(client =>
+      client.projectStatus === 'delivered'
+      && dateInMonth(client.deliveredAt || client.createdAt, selectedMonth)
+    );
+    const pages = delivered.reduce((sum, client) => sum + (client.pageCount || 1), 0);
     const weeks = [0, 0, 0, 0, 0];
-    delivered.forEach(c => { const date = new Date(`${c.deliveredAt || c.createdAt}`); const week = Math.min(4, Math.floor((date.getUTCDate() - 1) / 7)); weeks[week] += c.pageCount || 1; });
-    const received = (currency: Client['currency']) => created.filter(c => c.currency === currency).reduce((sum, c) => sum + (c.paidAmount || 0), 0);
-    const active = clients.filter(c => c.projectStatus === 'started' || c.projectStatus === 'review').length;
-    const pending = clients.filter(c => c.paymentStatus !== 'paid').reduce((sum, c) => sum + Math.max(0, c.amount - (c.paidAmount || 0)), 0);
-    const durations = delivered.filter(c => c.startedAt && c.deliveredAt).map(c => Math.max(0, Math.ceil((new Date(c.deliveredAt!).getTime() - new Date(c.startedAt!).getTime()) / 86400000)));
-    const averageDays = durations.length ? Math.round(durations.reduce((sum, days) => sum + days, 0) / durations.length) : 0;
-    return { delivered, created, pages, weeks, active, pending, averageDays, received: (['BRL', 'USD', 'EUR'] as const).map(c => received(c) ? money(received(c), c) : '').filter(Boolean).join(' · ') || money(0, 'BRL') };
+
+    delivered.forEach(client => {
+      const date = new Date(String(client.deliveredAt || client.createdAt));
+      const week = Math.min(4, Math.floor((date.getUTCDate() - 1) / 7));
+      weeks[week] += client.pageCount || 1;
+    });
+
+    const active = clients.filter(client =>
+      client.projectStatus === 'started' || client.projectStatus === 'review'
+    ).length;
+    const pending = currencies
+      .map(currency => {
+        const total = clients
+          .filter(client => client.currency === currency && client.paymentStatus !== 'paid')
+          .reduce((sum, client) => sum + Math.max(0, client.amount - (client.paidAmount || 0)), 0);
+        return total ? money(total, currency) : '';
+      })
+      .filter(Boolean)
+      .join(' · ') || money(0, 'BRL');
+    const durations = delivered
+      .filter(client => client.startedAt && client.deliveredAt)
+      .map(client => Math.max(0, Math.ceil(
+        (new Date(client.deliveredAt!).getTime() - new Date(client.startedAt!).getTime()) / 86400000
+      )));
+    const averageDays = durations.length
+      ? Math.round(durations.reduce((sum, days) => sum + days, 0) / durations.length)
+      : 0;
+
+    return { delivered, pages, weeks, active, pending, averageDays };
   }, [clients, selectedMonth]);
+
   const remaining = Math.max(0, goal - metrics.pages);
   const progress = Math.min(100, Math.round(metrics.pages / goal * 100));
-  const visible = clients.filter(c => [c.name, c.contact, c.project].join(' ').toLowerCase().includes(query.toLowerCase()));
-  const monthDate = new Date(`${selectedMonth}-02T12:00:00`);
-  const moveMonth = (amount: number) => { const d = new Date(monthDate); d.setMonth(d.getMonth() + amount); setSelectedMonth(monthKey(d)); };
-  const totals = () => (['BRL', 'USD', 'EUR'] as const).map(currency => { const value = clients.filter(c => c.currency === currency).reduce((sum, c) => sum + c.amount, 0); return value ? money(value, currency) : ''; }).filter(Boolean).join(' · ') || money(0, 'BRL');
-  const start = (client?: Client) => {
-    setEditing(client?.id || null);
-    setForm(client ? { name: client.name, contact: client.contact || '', project: client.project || '', amount: client.amount, currency: client.currency || 'BRL', paymentStatus: client.paymentStatus, paymentMethod: client.paymentMethod || 'pix', paidAmount: client.paidAmount || 0, paymentDate: client.paymentDate || '', projectStatus: client.projectStatus, pageCount: client.pageCount || 1, startedAt: client.startedAt || '', deliveredAt: client.deliveredAt || '', notes: client.notes || '' } : blank);
-    setAmount(client ? client.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
-    setPaidAmount('');
-    setPaymentDate('');
-    setPaymentMode(client ? 'none' : 'full');
-    setOpen(true);
-  };
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const value = parseCurrencyInput(amount);
-    const alreadyReceived = editing ? form.paidAmount || 0 : 0;
-    const remaining = Number((value - alreadyReceived).toFixed(2));
-    const halfPayment = Number((value / 2).toFixed(2));
-    const newPayment = paymentMode === 'none' ? 0 : paymentMode === 'full' ? remaining : paymentMode === 'half' ? (editing ? Math.min(remaining, halfPayment) : halfPayment) : parseCurrencyInput(paidAmount);
-    const received = Number((alreadyReceived + newPayment).toFixed(2));
+  const monthDate = new Date(selectedMonth + '-02T12:00:00');
 
-    if (!Number.isFinite(value) || value <= 0) { alert('Informe um valor total válido.'); return; }
-    if (!Number.isFinite(newPayment) || newPayment < 0 || received > value) { alert('O novo pagamento deve estar entre zero e o saldo restante.'); return; }
-    if (paymentMode !== 'none' && newPayment <= 0) { alert('Informe um valor maior que zero para o novo pagamento.'); return; }
-    if (paymentMode !== 'none' && !paymentDate) { alert('Informe a data do novo recebimento.'); return; }
-    const paymentStatus: ClientPaymentStatus = received <= 0 ? 'pending' : received >= value ? 'paid' : 'half';
-    if (form.startedAt && form.deliveredAt && form.deliveredAt < form.startedAt) { alert('A data final não pode ser anterior à data de início.'); return; }
-    const payload = { ...form, amount: value, paidAmount: received, paymentStatus, paymentDate: newPayment > 0 ? paymentDate : form.paymentDate, deliveredAt: form.projectStatus === 'delivered' ? form.deliveredAt : '' };
-    if (editing ? await onEdit(editing, payload) : await onAdd(payload)) setOpen(false);
+  const moveMonth = (amount: number) => {
+    const date = new Date(monthDate);
+    date.setMonth(date.getMonth() + amount);
+    setSelectedMonth(monthKey(date));
   };
+
+  const updateGoal = (value: string) => {
+    const nextGoal = Math.max(1, Number(value) || 1);
+    localStorage.setItem(goalKey, String(nextGoal));
+    setGoal(nextGoal);
+  };
+
+  const openForm = (client?: Client) => {
+    setEditingClient(client);
+    setFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingClient(undefined);
+  };
+
+  const saveClient = (client: ClientInput) =>
+    editingClient ? onEdit(editingClient.id, client) : onAdd(client);
+
   const cards = [
-    { label: 'Meta do mês', value: `${metrics.pages} / ${goal} páginas`, detail: `${progress}% concluída`, icon: Target, color: 'text-blue-400' },
-    { label: 'Faltam para a meta', value: `${remaining} páginas`, detail: remaining ? 'para atingir o objetivo' : 'meta atingida', icon: Gauge, color: remaining ? 'text-amber-400' : 'text-emerald-400' },
-    { label: 'Média semanal', value: `${(metrics.pages / 4.33).toFixed(1)} páginas`, detail: `${metrics.delivered.length} projetos entregues`, icon: TrendingUp, color: 'text-violet-400' },
+    { label: 'Meta do mês', value: metrics.pages + ' / ' + goal + ' páginas', detail: progress + '% concluída', icon: Target, color: 'text-blue-400' },
+    { label: 'Faltam para a meta', value: remaining + ' páginas', detail: remaining ? 'para atingir o objetivo' : 'meta atingida', icon: Gauge, color: remaining ? 'text-amber-400' : 'text-emerald-400' },
+    { label: 'Média semanal', value: (metrics.pages / 4.33).toFixed(1) + ' páginas', detail: metrics.delivered.length + ' projetos entregues', icon: TrendingUp, color: 'text-violet-400' },
     { label: 'Prazo médio', value: metrics.averageDays ? metrics.averageDays + ' dias' : '--', detail: 'do início até a entrega', icon: CalendarDays, color: 'text-emerald-400' }
   ];
-  const parsedAmount = parseCurrencyInput(amount);
-  const alreadyReceived = editing ? form.paidAmount || 0 : 0;
-  const paymentBalance = Number.isFinite(parsedAmount) ? Math.max(0, parsedAmount - alreadyReceived) : 0;
-  return <div className="w-full flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar p-4 md:p-8 pb-24">
-    <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7"><div><p className="section-label">Gestão comercial</p><h1 className="text-3xl font-extrabold text-white">Dashboard de clientes</h1><p className="text-sm text-slate-400">Metas, produção e desempenho comercial por mês.</p></div><div className="flex gap-3"><div className="flex items-center rounded-2xl border border-white/10 bg-[#0c111e] p-1"><button onClick={() => moveMonth(-1)} className="p-2 text-slate-400 hover:text-white"><ChevronLeft size={18}/></button><span className="min-w-36 text-center text-sm font-bold capitalize text-white">{monthDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span><button onClick={() => moveMonth(1)} className="p-2 text-slate-400 hover:text-white"><ChevronRight size={18}/></button></div><button onClick={() => start()} className="btn-glow-primary px-5 h-11 rounded-2xl text-white font-bold flex items-center gap-2"><Plus size={18}/>Novo cliente</button></div></header>
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">{cards.map(card => <div className="dashboard-card p-5" key={card.label}><div className="flex items-start justify-between"><div><p className="text-xs text-slate-500">{card.label}</p><p className="mt-2 text-xl font-extrabold text-white">{card.value}</p><p className="mt-1 text-xs text-slate-500">{card.detail}</p></div><card.icon className={card.color} size={20}/></div></div>)}</div>
-    <div className="grid lg:grid-cols-[1.5fr_1fr] gap-4 mb-6">
-      <section className="dashboard-card p-5"><div className="flex items-center justify-between gap-3 mb-6"><div><h2 className="font-bold text-white">Páginas produzidas por semana</h2><p className="text-xs text-slate-500 mt-1">Entregas registradas no mês selecionado</p></div><CalendarDays size={20} className="text-blue-400"/></div><div className="flex h-44 items-end gap-3">{metrics.weeks.map((value, i) => { const max = Math.max(goal / 4, ...metrics.weeks, 1); return <div key={i} className="flex-1 flex flex-col justify-end h-full gap-2"><span className="text-center text-xs font-bold text-white">{value}</span><div className="mx-auto w-full max-w-16 rounded-t-xl bg-gradient-to-t from-blue-600 to-cyan-400 transition-all" style={{height: `${Math.max(value ? 12 : 3, value / max * 120)}px`, opacity: value ? 1 : .2}}/><span className="text-center text-[10px] text-slate-500">Sem. {i + 1}</span></div>})}</div></section>
-      <section className="dashboard-card p-5"><div className="flex justify-between"><div><h2 className="font-bold text-white">Progresso da meta</h2><p className="text-xs text-slate-500 mt-1">Ajuste sua meta mensal de páginas</p></div><Target size={20} className="text-violet-400"/></div><div className="my-7"><div className="flex justify-between text-xs mb-2"><span className="text-slate-400">{metrics.pages} produzidas</span><span className="font-bold text-white">{progress}%</span></div><div className="h-3 rounded-full bg-white/5 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-violet-500" style={{width: `${progress}%`}}/></div></div>
-<label className={labelClass}>Meta de páginas<input key={goalKey} type="number" min="1" className={fieldClass} defaultValue={goal} onBlur={e => { localStorage.setItem(goalKey, String(Math.max(1, Number(e.target.value) || 1))); setGoalRefresh(v => v + 1); }}/></label><div className="grid grid-cols-2 gap-3 mt-4"><div className="rounded-xl bg-white/[.03] p-3"><p className="text-[10px] text-slate-500">Projetos ativos</p><b className="text-white">{metrics.active}</b></div><div className="rounded-xl bg-white/[.03] p-3"><p className="text-[10px] text-slate-500">A receber (BRL*)</p><b className="text-white">{money(metrics.pending, 'BRL')}</b></div></div><p className="mt-2 text-[10px] text-slate-600">* Soma nominal de todas as moedas.</p></section>
+
+  return <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-24 md:p-8 custom-scrollbar">
+    <header className="mb-7 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div>
+        <p className="section-label">Gestão comercial</p>
+        <h1 className="text-3xl font-extrabold text-white">Dashboard de clientes</h1>
+        <p className="text-sm text-slate-400">Metas, produção e desempenho comercial por mês.</p>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <div className="flex items-center rounded-2xl border border-white/10 bg-[#0c111e] p-1">
+          <button type="button" aria-label="Mês anterior" onClick={() => moveMonth(-1)} className="p-2 text-slate-400 hover:text-white">
+            <ChevronLeft size={18}/>
+          </button>
+          <span className="min-w-36 text-center text-sm font-bold capitalize text-white">
+            {monthDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+          </span>
+          <button type="button" aria-label="Próximo mês" onClick={() => moveMonth(1)} className="p-2 text-slate-400 hover:text-white">
+            <ChevronRight size={18}/>
+          </button>
+        </div>
+        <button type="button" onClick={() => openForm()} className="btn-glow-primary flex h-11 items-center gap-2 rounded-2xl px-5 font-bold text-white">
+          <Plus size={18}/>Novo cliente
+        </button>
+      </div>
+    </header>
+
+    <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+      {cards.map(card => <div className="dashboard-card p-5" key={card.label}>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs text-slate-500">{card.label}</p>
+            <p className="mt-2 text-xl font-extrabold text-white">{card.value}</p>
+            <p className="mt-1 text-xs text-slate-500">{card.detail}</p>
+          </div>
+          <card.icon className={card.color} size={20}/>
+        </div>
+      </div>)}
     </div>
-    <section className="dashboard-card p-5"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5"><div><h2 className="font-bold text-white">Carteira de clientes</h2><p className="text-xs text-slate-500 mt-1">{clients.length} clientes · {totals()} contratados</p></div><div className="relative max-w-md"><Search className="absolute left-4 top-4 text-slate-500" size={16}/><input className={fieldClass + ' !mt-0 !pl-11'} placeholder="Buscar cliente ou projeto..." value={query} onChange={e => setQuery(e.target.value)}/></div></div><div className="overflow-x-auto rounded-2xl border border-white/10"><table className="w-full min-w-[940px] border-collapse text-left"><thead className="bg-white/[0.035]"><tr className="border-b border-white/10">{['Nome', 'Projeto', 'Páginas', 'Valor', 'Pagamento', 'Etapa', 'Início / final', ''].map(title => <th key={title} className="px-4 py-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">{title}</th>)}</tr></thead><tbody className="divide-y divide-white/[0.06]">{visible.map(client => <tr key={client.id} className="bg-[#0c111e]/60 hover:bg-white/[0.025]"><td className="px-4 py-4"><p className="font-semibold text-white">{client.name}</p><p className="text-xs text-slate-500">{client.contact || '--'}</p></td><td className="px-4 py-4 text-sm text-slate-300">{client.project || 'Não informado'}</td><td className="px-4 py-4 font-bold text-white">{client.pageCount || 1}</td><td className="px-4 py-4 font-bold text-white whitespace-nowrap">{money(client.amount, client.currency)}</td><td className="px-4 py-4"><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${client.paymentStatus === 'paid' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : client.paymentStatus === 'half' ? 'border-amber-500/20 bg-amber-500/10 text-amber-300' : 'border-rose-500/20 bg-rose-500/10 text-rose-300'}`}>{payments[client.paymentStatus]}</span><p className={"mt-1 text-[10px] text-slate-500"}>{client.paymentMethod === 'card' ? 'Cartão' : 'Pix'} · {money(client.paidAmount || 0, client.currency)}</p></td><td className="px-4 py-4 text-sm text-slate-300 whitespace-nowrap">{stages[client.projectStatus]}</td><td className="px-4 py-4 text-sm text-slate-400 whitespace-nowrap">{client.startedAt ? new Date(client.startedAt + 'T12:00').toLocaleDateString('pt-BR') : '--'}<span className={"mx-1 text-slate-600"}>→</span>{client.deliveredAt ? new Date(client.deliveredAt + 'T12:00').toLocaleDateString('pt-BR') : '--'}</td><td className="px-3 py-4"><div className="flex justify-end"><button title="Editar" className="p-2 text-slate-500 hover:text-blue-400" onClick={() => start(client)}><Edit2 size={15}/></button><button title="Excluir" className="p-2 text-slate-500 hover:text-rose-400" onClick={() => confirm('Excluir este cliente?') && onDelete(client.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>{!visible.length && <p className="text-center text-slate-500 py-16">Nenhum cliente encontrado.</p>}</section>
-    {open && <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-[#0d1424] border border-white/10 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"><div className="px-6 py-5 border-b border-white/10 flex justify-between"><div><b className="text-lg text-white">{editing ? 'Editar' : 'Novo'} cliente</b><p className="text-xs text-slate-500 mt-1">Dados do projeto e da produção</p></div><button className="text-slate-500" onClick={() => setOpen(false)}><X size={20}/></button></div><form onSubmit={submit} className="p-6 grid md:grid-cols-2 gap-5">
-<label className={labelClass}>Nome do cliente<input required className={fieldClass} value={form.name} onChange={e => setForm({...form, name:e.target.value})}/></label>
-<label className={labelClass}>Contato<input className={fieldClass} value={form.contact} onChange={e => setForm({...form, contact:e.target.value})}/></label>
-<label className={labelClass}>Projeto<input className={fieldClass} placeholder="Ex: Landing page" value={form.project} onChange={e => setForm({...form, project:e.target.value})}/></label>
-<label className={labelClass}>Quantidade de páginas<input type="number" min="1" required className={fieldClass} value={form.pageCount} onChange={e => setForm({...form, pageCount:Math.max(1, Number(e.target.value))})}/></label><div className="grid grid-cols-[1fr_120px] gap-3">
-<label className={labelClass}>Valor total<input required className={fieldClass} inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)}/></label>
-<label className={labelClass}>Moeda<select className={fieldClass} value={form.currency} onChange={e => setForm({...form, currency:e.target.value as Client['currency']})}><option value="BRL">R$ Real</option><option value="USD">$ Dólar</option><option value="EUR">EUR Euro</option></select></label></div>
-<label className={labelClass}>Forma de pagamento<select className={fieldClass} value={form.paymentMethod} onChange={e => setForm({...form, paymentMethod:e.target.value as ClientPaymentMethod})}><option value="pix">Pix</option><option value="card">Cartão</option></select></label>
-{editing && <div className="md:col-span-2 grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4"><div><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Já recebido</p><p className="mt-1 font-bold text-emerald-300">{money(alreadyReceived, form.currency)}</p></div><div><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Saldo restante</p><p className="mt-1 font-bold text-white">{money(paymentBalance, form.currency)}</p></div></div>}
-<label className={labelClass}>{editing ? 'Novo recebimento' : 'Recebimento'}<select className={fieldClass} value={paymentMode} onChange={e => setPaymentMode(e.target.value as PaymentMode)}>{editing && <option value="none">Sem novo pagamento</option>}<option value="half">{editing ? 'Adicionar 50% do projeto' : '50% do projeto'}</option><option value="full">{editing ? 'Quitar saldo restante' : '100% do projeto'}</option><option value="custom">{editing ? 'Adicionar valor personalizado' : 'Valor personalizado'}</option></select></label>{paymentMode === 'custom' &&
-<label className={labelClass}>{editing ? 'Valor deste pagamento' : 'Valor recebido'}<input required className={fieldClass} inputMode="decimal" placeholder="Ex: 1.250,00" value={paidAmount} onChange={e => setPaidAmount(e.target.value)}/></label>}
-<label className={labelClass}>{editing ? 'Data do novo recebimento' : 'Data do recebimento'}<input required={paymentMode !== 'none'} disabled={paymentMode === 'none'} type="date" className={fieldClass + ' disabled:opacity-40'} value={paymentDate} onChange={e => setPaymentDate(e.target.value)}/></label>
-<label className={labelClass}>Etapa<select className={fieldClass} value={form.projectStatus} onChange={e => setForm({...form, projectStatus:e.target.value as ClientProjectStatus})}>{Object.entries(stages).map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-<label className={labelClass}>Data de início<input type="date" required={form.projectStatus !== 'awaiting_info'} className={fieldClass} value={form.startedAt} onChange={e => setForm({...form, startedAt:e.target.value})}/></label>
-<label className={labelClass}>Data final<input type="date" disabled={form.projectStatus !== 'delivered'} required={form.projectStatus === 'delivered'} min={form.startedAt} className={fieldClass + ' disabled:opacity-40'} value={form.deliveredAt} onChange={e => setForm({...form, deliveredAt:e.target.value})}/></label>
-<label className={labelClass + ' md:col-span-2'}>Observações<textarea className={fieldClass + ' min-h-28 py-3'} value={form.notes} onChange={e => setForm({...form, notes:e.target.value})}/></label><div className="md:col-span-2 flex justify-end gap-3 border-t border-white/5 pt-5"><button type="button" onClick={() => setOpen(false)} className="px-5 py-3 text-slate-400">Cancelar</button><button className="btn-glow-primary px-6 py-3 rounded-xl text-white font-bold">Salvar cliente</button></div></form></div></div>}
+
+    <div className="mb-6 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+      <section className="dashboard-card p-5">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-white">Páginas produzidas por semana</h2>
+            <p className="mt-1 text-xs text-slate-500">Entregas registradas no mês selecionado</p>
+          </div>
+          <CalendarDays size={20} className="text-blue-400"/>
+        </div>
+        <div className="flex h-44 items-end gap-3">
+          {metrics.weeks.map((value, index) => {
+            const max = Math.max(goal / 4, ...metrics.weeks, 1);
+            return <div key={index} className="flex h-full flex-1 flex-col justify-end gap-2">
+              <span className="text-center text-xs font-bold text-white">{value}</span>
+              <div
+                className="mx-auto w-full max-w-16 rounded-t-xl bg-gradient-to-t from-blue-600 to-cyan-400 transition-all"
+                style={{ height: Math.max(value ? 12 : 3, value / max * 120) + 'px', opacity: value ? 1 : .2 }}
+              />
+              <span className="text-center text-[10px] text-slate-500">Sem. {index + 1}</span>
+            </div>;
+          })}
+        </div>
+      </section>
+
+      <section className="dashboard-card p-5">
+        <div className="flex justify-between">
+          <div>
+            <h2 className="font-bold text-white">Progresso da meta</h2>
+            <p className="mt-1 text-xs text-slate-500">Ajuste sua meta mensal de páginas</p>
+          </div>
+          <Target size={20} className="text-violet-400"/>
+        </div>
+        <div className="my-7">
+          <div className="mb-2 flex justify-between text-xs">
+            <span className="text-slate-400">{metrics.pages} produzidas</span>
+            <span className="font-bold text-white">{progress}%</span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-white/5">
+            <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-violet-500" style={{ width: progress + '%' }}/>
+          </div>
+        </div>
+        <label className={labelClass}>Meta de páginas
+          <input key={goalKey} type="number" min="1" className={fieldClass} defaultValue={goal} onBlur={event => updateGoal(event.target.value)}/>
+        </label>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-white/[.03] p-3">
+            <p className="text-[10px] text-slate-500">Projetos ativos</p>
+            <b className="text-white">{metrics.active}</b>
+          </div>
+          <div className="min-w-0 rounded-xl bg-white/[.03] p-3">
+            <p className="text-[10px] text-slate-500">A receber</p>
+            <b className="break-words text-sm text-white">{metrics.pending}</b>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <ClientPortfolio clients={clients} onEdit={openForm} onDelete={onDelete}/>
+
+    {formOpen && <ClientFormModal
+      client={editingClient}
+      onClose={closeForm}
+      onSave={saveClient}
+    />}
   </div>;
 }

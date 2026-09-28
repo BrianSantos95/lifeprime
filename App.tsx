@@ -1007,7 +1007,7 @@ const App: React.FC = () => {
       date: new Date(`${client.paymentDate || new Date().toISOString().slice(0, 10)}T12:00:00`).toISOString()
     };
     const { data, error } = await supabase.from('transactions').insert(transactionPayload).select().single();
-    if (error) { console.error(error); alert('Cliente salvo, mas não foi possível sincronizar o recebimento com o Financeiro.'); return false; }
+    if (error) { console.error(error); alert('Não foi possível registrar o recebimento no Financeiro. Tente novamente.'); return false; }
     const transaction = { ...data, date: new Date(data.date) } as Transaction;
     setTransactions(current => [transaction, ...current]);
     return true;
@@ -1015,16 +1015,40 @@ const App: React.FC = () => {
   const handleAddClient = async (client: Omit<Client, 'id' | 'createdAt'>) => {
     const { data, error } = await supabase.from('clients').insert(clientPayload(client)).select().single();
     if (error) { console.error(error); alert('Nao foi possivel salvar. Execute a migracao supabase_clients.sql.'); return false; }
-    setClients((current: Client[]) => [{ ...client, id: data.id, createdAt: data.created_at }, ...current]);
-    await syncClientPayment(data.id, client);
+    const newClient = { ...client, id: data.id, createdAt: data.created_at };
+    const paymentSynced = await syncClientPayment(data.id, client);
+    if (!paymentSynced) {
+      const { error: rollbackError } = await supabase.from('clients').delete().eq('id', data.id);
+      if (rollbackError) {
+        console.error(rollbackError);
+        setClients((current: Client[]) => [newClient, ...current]);
+        alert('O cliente foi salvo, mas o recebimento continua pendente de sincronização.');
+        return true;
+      }
+      return false;
+    }
+    setClients((current: Client[]) => [newClient, ...current]);
     return true;
   };
 
   const handleEditClient = async (id: string, client: Omit<Client, 'id' | 'createdAt'>) => {
+    const previousClient = clients.find((item: Client) => item.id === id);
     const { error } = await supabase.from('clients').update(clientPayload(client)).eq('id', id);
     if (error) { console.error(error); alert('Nao foi possivel atualizar o cliente.'); return false; }
+    const paymentSynced = await syncClientPayment(id, client);
+    if (!paymentSynced) {
+      if (previousClient) {
+        const { error: rollbackError } = await supabase.from('clients').update(clientPayload(previousClient)).eq('id', id);
+        if (rollbackError) {
+          console.error(rollbackError);
+          setClients((current: Client[]) => current.map(item => item.id === id ? { ...item, ...client } : item));
+          alert('Não foi possível reverter a alteração do cliente. Revise o recebimento antes de tentar novamente.');
+        }
+      }
+      return false;
+    }
     setClients((current: Client[]) => current.map(item => item.id === id ? { ...item, ...client } : item));
-    return syncClientPayment(id, client);
+    return true;
   };
 
   const handleDeleteClient = async (id: string) => {
@@ -1037,7 +1061,7 @@ const App: React.FC = () => {
     <div className="app-shell flex h-screen text-slate-300 font-sans overflow-hidden" >
       <Sidebar activePage={activePage} onNavigate={setActivePage} onSignOut={handleSignOut} />
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         {activePage === 'dashboard' ? (
           <>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-7 xl:p-8 pb-24 md:pb-8">
@@ -1237,7 +1261,7 @@ const App: React.FC = () => {
             />
           </div>
         ) : (
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col items-center justify-center text-slate-500 animate-in fade-in duration-300">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden text-slate-500 animate-in fade-in duration-300">
             {activePage === 'calendar' && <ClientsDashboard clients={clients} onAdd={handleAddClient} onEdit={handleEditClient} onDelete={handleDeleteClient} />}
             {activePage === 'calendar-disabled' && (
               <div className="text-center">
