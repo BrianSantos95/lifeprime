@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Habit, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask, Client } from '../types';
+import { Habit, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask, Client, TrafficCampaign } from '../types';
 import { Circle } from 'lucide-react';
 
 const iconMap: Record<string, any> = {
@@ -17,6 +17,7 @@ const iconMap: Record<string, any> = {
 
 export const useSupabaseData = (session: any) => {
     const [loading, setLoading] = useState(true);
+    const [loadedUserId, setLoadedUserId] = useState<string>();
     const [habits, setHabits] = useState<Habit[]>([]);
     const [completions, setCompletions] = useState<Record<string, boolean>>({});
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -25,15 +26,38 @@ export const useSupabaseData = (session: any) => {
     const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
     const [tasks, setTasks] = useState<DailyTask[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
+    const [trafficCampaigns, setTrafficCampaigns] = useState<TrafficCampaign[]>([]);
+    const [acquisitionError, setAcquisitionError] = useState<string>();
 
     useEffect(() => {
+        let cancelled = false;
+        const commit = (update: () => void) => {
+            if (!cancelled) update();
+        };
+        const clearData = () => {
+            setHabits([]);
+            setCompletions({});
+            setTransactions([]);
+            setGoals([]);
+            setBudgets([]);
+            setRecurring([]);
+            setTasks([]);
+            setClients([]);
+            setTrafficCampaigns([]);
+            setAcquisitionError(undefined);
+        };
+
         if (!session) {
+            clearData();
+            setLoadedUserId(undefined);
             setLoading(false);
-            return;
+            return () => { cancelled = true; };
         }
 
         const fetchData = async () => {
             setLoading(true);
+            setLoadedUserId(undefined);
+            clearData();
             try {
                 // 1. Habits
                 const { data: habitsData } = await supabase.from('habits').select('*').order('created_at', { ascending: true });
@@ -46,7 +70,7 @@ export const useSupabaseData = (session: any) => {
                         icon: iconMap[h.icon] || <Circle size={12} fill="currentColor" />,
                         completions: []
                     }));
-                    setHabits(formattedHabits);
+                    commit(() => setHabits(formattedHabits));
                 }
 
                 // 2. Completions
@@ -61,7 +85,7 @@ export const useSupabaseData = (session: any) => {
                         const key = `${c.habit_id}-${parseInt(year)}-${parseInt(month) - 1}-${parseInt(day)}`;
                         map[key] = true;
                     });
-                    setCompletions(map);
+                    commit(() => setCompletions(map));
                 }
 
                 // 3. Transactions
@@ -69,9 +93,11 @@ export const useSupabaseData = (session: any) => {
                 if (transData) {
                     const formatted = transData.map((t: any) => ({
                         ...t,
-                        date: new Date(t.date)
+                        date: new Date(t.date),
+                        clientId: t.client_id || undefined,
+                        campaignId: t.campaign_id || undefined
                     }));
-                    setTransactions(formatted);
+                    commit(() => setTransactions(formatted));
                 }
 
                 // 4. Goals
@@ -86,12 +112,12 @@ export const useSupabaseData = (session: any) => {
                         icon: g.icon,
                         color: g.color
                     }));
-                    setGoals(formattedGoals);
+                    commit(() => setGoals(formattedGoals));
                 }
 
                 // 5. Budgets
                 const { data: budgetsData } = await supabase.from('budgets').select('*').order('created_at', { ascending: true });
-                if (budgetsData) setBudgets(budgetsData);
+                if (budgetsData) commit(() => setBudgets(budgetsData));
 
                 // 6. Recurring
                 const { data: recData } = await supabase.from('recurring_expenses').select('*').order('due_day', { ascending: true });
@@ -103,7 +129,7 @@ export const useSupabaseData = (session: any) => {
                         installmentsTotal: r.installments_total,
                         currentInstallment: r.current_installment
                     }));
-                    setRecurring(formatted);
+                    commit(() => setRecurring(formatted));
                 }
 
                 // 7. Tasks
@@ -141,12 +167,34 @@ export const useSupabaseData = (session: any) => {
                             position: savedOrder[task.id]?.position ?? task.position ?? fallbackPosition
                         };
                     });
-                    setTasks(formattedTasks.sort((a: any, b: any) => a.position - b.position));
+                    commit(() => setTasks(formattedTasks.sort((a: any, b: any) => a.position - b.position)));
+                }
+
+                const { data: campaignsData, error: campaignsError } = await supabase
+                    .from('traffic_campaigns')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (!campaignsError && campaignsData) {
+                    const formattedCampaigns = campaignsData.map((campaign: any) => ({
+                        id: campaign.id,
+                        name: campaign.name,
+                        platform: campaign.platform,
+                        status: campaign.status,
+                        monthlyBudget: Number(campaign.monthly_budget) || 0,
+                        startDate: campaign.start_date,
+                        endDate: campaign.end_date || undefined,
+                        notes: campaign.notes || '',
+                        createdAt: campaign.created_at
+                    }));
+                    commit(() => setTrafficCampaigns(formattedCampaigns));
+                } else if (campaignsError) {
+                    commit(() => setAcquisitionError('Não foi possível carregar as campanhas. Execute a migration de aquisição no Supabase.'));
                 }
 
                 const { data: clientsData, error: clientsError } = await supabase
                     .from('clients').select('*').order('created_at', { ascending: false });
-                if (!clientsError && clientsData) setClients(clientsData.map((client: any) => ({
+                if (!clientsError && clientsData) {
+                    const formattedClients = clientsData.map((client: any) => ({
                     id: client.id, name: client.name, contact: client.contact || '',
                     project: client.project || '', amount: Number(client.amount) || 0,
                     currency: client.currency || 'BRL',
@@ -155,22 +203,36 @@ export const useSupabaseData = (session: any) => {
                     projectStatus: client.project_status,
                     pageCount: Number(client.page_count) || 1,
                     startedAt: client.started_at || undefined,
-                    deliveredAt: client.delivered_at || undefined, notes: client.notes || '',
+                    deliveredAt: client.delivered_at || undefined,
+                    acquisitionSource: client.acquisition_source || 'not_informed',
+                    closedAfterFollowUp: client.closed_after_follow_up ?? undefined,
+                    trafficCampaignId: client.traffic_campaign_id || undefined,
+                    acquiredAt: client.acquired_at || undefined,
+                    acquisitionDetail: client.acquisition_detail || '',
+                    notes: client.notes || '',
                     createdAt: client.created_at
-                })));
+                    }));
+                    commit(() => setClients(formattedClients));
+                } else if (clientsError) {
+                    commit(() => setAcquisitionError('Não foi possível carregar os clientes e dados de aquisição.'));
+                }
 
             } catch (error) {
-                console.error('Error fetching data:', error);
+                if (!cancelled) console.error('Error fetching data:', error);
             } finally {
-                setLoading(false);
+                commit(() => {
+                    setLoadedUserId(session.user.id);
+                    setLoading(false);
+                });
             }
         };
 
         fetchData();
-    }, [session]);
+        return () => { cancelled = true; };
+    }, [session?.user?.id]);
 
     return {
-        loading,
+        loading, loadedUserId,
         habits, setHabits,
         completions, setCompletions,
         transactions, setTransactions,
@@ -178,6 +240,8 @@ export const useSupabaseData = (session: any) => {
         budgets, setBudgets,
         recurring, setRecurring,
         tasks, setTasks,
-        clients, setClients
+        clients, setClients,
+        trafficCampaigns, setTrafficCampaigns,
+        acquisitionError
     };
 };

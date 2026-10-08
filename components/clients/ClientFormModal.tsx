@@ -1,6 +1,13 @@
 import { FormEvent, MouseEvent, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { Client, ClientPaymentMethod, ClientPaymentStatus, ClientProjectStatus } from '../../types';
+import {
+  AcquisitionSource,
+  Client,
+  ClientPaymentMethod,
+  ClientPaymentStatus,
+  ClientProjectStatus,
+  TrafficCampaign
+} from '../../types';
 import { parseCurrencyInput } from '../../lib/currency';
 
 export type ClientInput = Omit<Client, 'id' | 'createdAt'>;
@@ -8,6 +15,7 @@ type PaymentMode = 'none' | 'half' | 'full' | 'custom';
 
 interface ClientFormModalProps {
   client?: Client;
+  campaigns: TrafficCampaign[];
   onClose: () => void;
   onSave: (client: ClientInput) => Promise<boolean>;
 }
@@ -17,6 +25,22 @@ const stages: Record<ClientProjectStatus, string> = {
   started: 'Iniciado',
   review: 'Em revisão',
   delivered: 'Entregue'
+};
+
+const acquisitionSources: Record<AcquisitionSource, string> = {
+  not_informed: 'Selecione a origem',
+  paid_traffic: 'Tráfego pago',
+  active_prospecting: 'Prospecção ativa',
+  organic: 'Orgânico / conteúdo',
+  referral: 'Indicação',
+  partnership: 'Parceria',
+  other: 'Outro'
+};
+
+const localDateKey = () => {
+  const date = new Date();
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 };
 
 const blankClient: ClientInput = {
@@ -33,6 +57,11 @@ const blankClient: ClientInput = {
   pageCount: 1,
   startedAt: '',
   deliveredAt: '',
+  acquisitionSource: 'not_informed',
+  closedAfterFollowUp: undefined,
+  trafficCampaignId: '',
+  acquiredAt: localDateKey(),
+  acquisitionDetail: '',
   notes: ''
 };
 
@@ -56,10 +85,15 @@ const toClientInput = (client: Client): ClientInput => ({
   pageCount: client.pageCount || 1,
   startedAt: client.startedAt || '',
   deliveredAt: client.deliveredAt || '',
+  acquisitionSource: client.acquisitionSource || 'not_informed',
+  closedAfterFollowUp: client.closedAfterFollowUp,
+  trafficCampaignId: client.trafficCampaignId || '',
+  acquiredAt: client.acquiredAt || '',
+  acquisitionDetail: client.acquisitionDetail || '',
   notes: client.notes || ''
 });
 
-export default function ClientFormModal({ client, onClose, onSave }: ClientFormModalProps) {
+export default function ClientFormModal({ client, campaigns, onClose, onSave }: ClientFormModalProps) {
   const editing = Boolean(client);
   const [form, setForm] = useState<ClientInput>(() => client ? toClientInput(client) : blankClient);
   const [amount, setAmount] = useState(() => client ? client.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
@@ -121,6 +155,15 @@ export default function ClientFormModal({ client, onClose, onSave }: ClientFormM
       return;
     }
 
+    if (!editing && form.acquisitionSource === 'not_informed') {
+      alert('Informe como este cliente foi conquistado.');
+      return;
+    }
+    if (form.acquisitionSource !== 'not_informed' && !form.acquiredAt) {
+      alert('Informe a data em que o cliente foi conquistado.');
+      return;
+    }
+
     const paymentStatus: ClientPaymentStatus = received <= 0 ? 'pending' : received >= total ? 'paid' : 'half';
     const payload: ClientInput = {
       ...form,
@@ -128,6 +171,7 @@ export default function ClientFormModal({ client, onClose, onSave }: ClientFormM
       paidAmount: received,
       paymentStatus,
       paymentDate: newPayment > 0 ? paymentDate : form.paymentDate,
+      trafficCampaignId: form.acquisitionSource === 'paid_traffic' ? form.trafficCampaignId : '',
       deliveredAt: form.projectStatus === 'delivered' ? form.deliveredAt : ''
     };
 
@@ -150,7 +194,7 @@ export default function ClientFormModal({ client, onClose, onSave }: ClientFormM
       <div className="flex justify-between border-b border-white/10 px-6 py-5">
         <div>
           <b id="client-form-title" className="text-lg text-white">{editing ? 'Editar' : 'Novo'} cliente</b>
-          <p className="mt-1 text-xs text-slate-500">Dados do projeto e da produção</p>
+          <p className="mt-1 text-xs text-slate-500">Projeto, aquisição, pagamento e produção</p>
         </div>
         <button type="button" aria-label="Fechar" disabled={saving} className="rounded-lg p-2 text-slate-500 hover:bg-white/5 hover:text-white disabled:opacity-40" onClick={onClose}>
           <X size={20}/>
@@ -169,6 +213,72 @@ export default function ClientFormModal({ client, onClose, onSave }: ClientFormM
         </label>
         <label className={labelClass}>Quantidade de páginas
           <input type="number" min="1" required className={fieldClass} value={form.pageCount} onChange={event => setForm({ ...form, pageCount: Math.max(1, Number(event.target.value)) })}/>
+        </label>
+
+        <div className="md:col-span-2 rounded-2xl border border-blue-500/15 bg-blue-500/[0.035] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-300">Aquisição do cliente</p>
+          <p className="mt-1 text-xs normal-case tracking-normal text-slate-500">Origem e toque de conversão são separados para a atribuição ficar fiel.</p>
+        </div>
+
+        <label className={labelClass}>Origem principal
+          <select
+            required
+            className={fieldClass}
+            value={form.acquisitionSource}
+            onChange={event => setForm({
+              ...form,
+              acquisitionSource: event.target.value as AcquisitionSource,
+              trafficCampaignId: event.target.value === 'paid_traffic' ? form.trafficCampaignId : ''
+            })}
+          >
+            {Object.entries(acquisitionSources).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        <label className={labelClass}>Data da conquista
+          <input
+            type="date"
+            required={form.acquisitionSource !== 'not_informed'}
+            className={fieldClass}
+            value={form.acquiredAt}
+            onChange={event => setForm({ ...form, acquiredAt: event.target.value })}
+          />
+        </label>
+
+        {form.acquisitionSource === 'paid_traffic' && <label className={labelClass}>Campanha
+          <select
+            className={fieldClass}
+            value={form.trafficCampaignId}
+            onChange={event => setForm({ ...form, trafficCampaignId: event.target.value })}
+          >
+            <option value="">Tráfego sem campanha identificada</option>
+            {campaigns.map(campaign => (
+              <option key={campaign.id} value={campaign.id}>
+                {campaign.name}{campaign.status === 'active' ? ' · ON' : ''}
+              </option>
+            ))}
+          </select>
+        </label>}
+        <label className={labelClass}>Fechou após follow-up?
+          <select
+            className={fieldClass}
+            value={form.closedAfterFollowUp === undefined ? '' : form.closedAfterFollowUp ? 'yes' : 'no'}
+            onChange={event => setForm({
+              ...form,
+              closedAfterFollowUp: event.target.value === '' ? undefined : event.target.value === 'yes'
+            })}
+          >
+            <option value="">Não informado</option>
+            <option value="yes">Sim</option>
+            <option value="no">Não</option>
+          </select>
+        </label>
+        <label className={`${labelClass} ${form.acquisitionSource === 'paid_traffic' ? 'md:col-span-2' : ''}`}>Detalhe da origem
+          <input
+            className={fieldClass}
+            placeholder="Ex: indicação da Ana, lista outbound, campanha de outubro..."
+            value={form.acquisitionDetail}
+            onChange={event => setForm({ ...form, acquisitionDetail: event.target.value })}
+          />
         </label>
 
         <div className="grid grid-cols-[1fr_120px] gap-3">

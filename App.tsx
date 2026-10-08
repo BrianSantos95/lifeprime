@@ -27,7 +27,7 @@ import StatsCards from './components/StatsCards';
 import FinanceDashboard from './components/FinanceDashboard';
 import WeeklyKanban from './components/WeeklyKanban';
 import ClientsDashboard from './components/ClientsDashboard';
-import { Habit, ChartDataPoint, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask, Client } from './types';
+import { Habit, ChartDataPoint, Transaction, FinancialGoal, Budget, RecurringExpense, DailyTask, Client, TrafficCampaign } from './types';
 
 // Helper to format date keys for storage
 const getDateKey = (habitId: number, date: Date) => {
@@ -53,7 +53,7 @@ const App: React.FC = () => {
 
   // --- Data Hook ---
   const {
-    loading: dataLoading,
+    loading: dataLoading, loadedUserId,
     habits: habitDefs, setHabits: setHabitDefs,
     completions: completionsMap, setCompletions: setCompletionsMap,
     transactions, setTransactions,
@@ -61,7 +61,9 @@ const App: React.FC = () => {
     budgets, setBudgets,
     recurring: recurringExpenses, setRecurring: setRecurringExpenses,
     tasks: dailyTasks, setTasks: setDailyTasks,
-    clients, setClients
+    clients, setClients,
+    trafficCampaigns, setTrafficCampaigns,
+    acquisitionError
   } = useSupabaseData(session);
 
   // --- UI State ---
@@ -765,6 +767,33 @@ const App: React.FC = () => {
   };
 
   const handleEditTransaction = async (id: string, updatedTransaction: Partial<Transaction>) => {
+    const currentTransaction = transactions.find(transaction => transaction.id === id);
+    if (!currentTransaction) return;
+    const campaign = currentTransaction.campaignId
+      ? trafficCampaigns.find((item: TrafficCampaign) => item.id === currentTransaction.campaignId)
+      : undefined;
+
+    if (currentTransaction.campaignId) {
+      const nextAmount = updatedTransaction.amount ?? currentTransaction.amount;
+      const nextType = updatedTransaction.type ?? currentTransaction.type;
+      const nextDate = updatedTransaction.date ?? currentTransaction.date;
+      const dateKey = [
+        nextDate.getFullYear(),
+        String(nextDate.getMonth() + 1).padStart(2, '0'),
+        String(nextDate.getDate()).padStart(2, '0')
+      ].join('-');
+
+      if (!Number.isFinite(nextAmount) || nextAmount <= 0 || nextType !== 'expense') {
+        alert('Um investimento de tráfego precisa continuar como despesa com valor maior que zero.');
+        return;
+      }
+      if (campaign && (dateKey < campaign.startDate || Boolean(campaign.endDate && dateKey > campaign.endDate!))) {
+        alert('A data do investimento precisa estar dentro da vigência da campanha.');
+        return;
+      }
+    }
+
+    const previousTransactions = transactions;
     setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updatedTransaction } : t));
     try {
       // BUG FIX #1: Serializar o campo `date` para string ISO antes de enviar ao Supabase.
@@ -775,7 +804,11 @@ const App: React.FC = () => {
       }
       const { error } = await supabase.from('transactions').update(payload).eq('id', id);
       if (error) throw error;
-    } catch (err) { console.error('Error editing transaction:', err); }
+    } catch (err) {
+      console.error('Error editing transaction:', err);
+      setTransactions(previousTransactions);
+      alert('Não foi possível atualizar a transação.');
+    }
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -939,6 +972,14 @@ const App: React.FC = () => {
     return <Auth onLoginSuccess={() => { }} />;
   }
 
+  if (dataLoading || loadedUserId !== session.user.id) {
+    return (
+      <div className="h-screen bg-[#080b13] flex items-center justify-center">
+        <div className="w-9 h-9 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -983,6 +1024,11 @@ const App: React.FC = () => {
     page_count: client.pageCount || 1,
     started_at: client.startedAt || null,
     delivered_at: client.deliveredAt || null,
+    acquisition_source: client.acquisitionSource || 'not_informed',
+    closed_after_follow_up: client.closedAfterFollowUp ?? null,
+    traffic_campaign_id: client.acquisitionSource === 'paid_traffic' ? client.trafficCampaignId || null : null,
+    acquired_at: client.acquiredAt || null,
+    acquisition_detail: client.acquisitionDetail || null,
     notes: client.notes || null
   });
 
@@ -1014,7 +1060,11 @@ const App: React.FC = () => {
   };
   const handleAddClient = async (client: Omit<Client, 'id' | 'createdAt'>) => {
     const { data, error } = await supabase.from('clients').insert(clientPayload(client)).select().single();
-    if (error) { console.error(error); alert('Nao foi possivel salvar. Execute a migracao supabase_clients.sql.'); return false; }
+    if (error) {
+      console.error(error);
+      alert('Não foi possível salvar o cliente. Confira a conexão e execute a migration de aquisição no Supabase.');
+      return false;
+    }
     const newClient = { ...client, id: data.id, createdAt: data.created_at };
     const paymentSynced = await syncClientPayment(data.id, client);
     if (!paymentSynced) {
@@ -1034,7 +1084,11 @@ const App: React.FC = () => {
   const handleEditClient = async (id: string, client: Omit<Client, 'id' | 'createdAt'>) => {
     const previousClient = clients.find((item: Client) => item.id === id);
     const { error } = await supabase.from('clients').update(clientPayload(client)).eq('id', id);
-    if (error) { console.error(error); alert('Nao foi possivel atualizar o cliente.'); return false; }
+    if (error) {
+      console.error(error);
+      alert('Não foi possível atualizar o cliente. Confira se a migration de aquisição foi executada.');
+      return false;
+    }
     const paymentSynced = await syncClientPayment(id, client);
     if (!paymentSynced) {
       if (previousClient) {
@@ -1055,6 +1109,108 @@ const App: React.FC = () => {
     const { error } = await supabase.from('clients').delete().eq('id', id);
     if (error) { console.error(error); alert('Nao foi possivel excluir o cliente.'); return; }
     setClients((current: Client[]) => current.filter(item => item.id !== id));
+  };
+
+  const trafficCampaignPayload = (campaign: Omit<TrafficCampaign, 'id' | 'createdAt'>) => ({
+    user_id: session.user.id,
+    name: campaign.name.trim(),
+    platform: campaign.platform,
+    status: campaign.status,
+    monthly_budget: campaign.monthlyBudget || 0,
+    start_date: campaign.startDate,
+    end_date: campaign.endDate || null,
+    notes: campaign.notes || null
+  });
+
+  const handleAddTrafficCampaign = async (campaign: Omit<TrafficCampaign, 'id' | 'createdAt'>) => {
+    const { data, error } = await supabase
+      .from('traffic_campaigns')
+      .insert(trafficCampaignPayload(campaign))
+      .select()
+      .single();
+    if (error) {
+      console.error(error);
+      alert('Não foi possível criar a campanha. Execute a nova migration de aquisição no Supabase.');
+      return false;
+    }
+    setTrafficCampaigns((current: TrafficCampaign[]) => [{
+      ...campaign,
+      id: data.id,
+      createdAt: data.created_at
+    }, ...current]);
+    return true;
+  };
+
+  const handleEditTrafficCampaign = async (
+    id: string,
+    campaign: Omit<TrafficCampaign, 'id' | 'createdAt'>
+  ) => {
+    const hasInvestmentOutsidePeriod = transactions
+      .filter(transaction => transaction.campaignId === id)
+      .some(transaction => {
+        const date = transaction.date;
+        const dateKey = [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, '0'),
+          String(date.getDate()).padStart(2, '0')
+        ].join('-');
+        return dateKey < campaign.startDate || Boolean(campaign.endDate && dateKey > campaign.endDate);
+      });
+    if (hasInvestmentOutsidePeriod) {
+      alert('O novo período deixaria investimentos existentes fora da vigência da campanha.');
+      return false;
+    }
+
+    const { error } = await supabase
+      .from('traffic_campaigns')
+      .update(trafficCampaignPayload(campaign))
+      .eq('id', id);
+    if (error) {
+      console.error(error);
+      alert('Não foi possível atualizar a campanha.');
+      return false;
+    }
+    setTrafficCampaigns((current: TrafficCampaign[]) =>
+      current.map(item => item.id === id ? { ...item, ...campaign } : item)
+    );
+    return true;
+  };
+
+  const handleDeleteTrafficCampaign = async (id: string) => {
+    const campaign = trafficCampaigns.find((item: TrafficCampaign) => item.id === id);
+    if (!campaign || !window.confirm(`Excluir a campanha "${campaign.name}"? Campanhas com clientes ou investimentos devem ser marcadas como Encerradas para preservar o histórico.`)) return;
+    const { error } = await supabase.from('traffic_campaigns').delete().eq('id', id);
+    if (error) {
+      console.error(error);
+      alert('Esta campanha já possui histórico. Marque-a como Encerrada em vez de excluir.');
+      return;
+    }
+    setTrafficCampaigns((current: TrafficCampaign[]) => current.filter(item => item.id !== id));
+  };
+
+  const handleAddTrafficInvestment = async (campaignId: string, amount: number, date: Date) => {
+    const campaign = trafficCampaigns.find((item: TrafficCampaign) => item.id === campaignId);
+    if (!campaign || !Number.isFinite(amount) || amount <= 0) return false;
+    const { data, error } = await supabase.from('transactions').insert({
+      user_id: session.user.id,
+      campaign_id: campaignId,
+      type: 'expense',
+      amount,
+      category: 'Tráfego pago',
+      description: `Tráfego · ${campaign.name}`,
+      date: date.toISOString()
+    }).select().single();
+    if (error) {
+      console.error(error);
+      alert('Não foi possível registrar o investimento.');
+      return false;
+    }
+    setTransactions(current => [...current, {
+      ...data,
+      date: new Date(data.date),
+      campaignId: data.campaign_id
+    } as Transaction]);
+    return true;
   };
 
   return (
@@ -1262,7 +1418,19 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-hidden text-slate-500 animate-in fade-in duration-300">
-            {activePage === 'calendar' && <ClientsDashboard clients={clients} onAdd={handleAddClient} onEdit={handleEditClient} onDelete={handleDeleteClient} />}
+            {activePage === 'calendar' && <ClientsDashboard
+              clients={clients}
+              campaigns={trafficCampaigns}
+              transactions={transactions}
+              onAdd={handleAddClient}
+              onEdit={handleEditClient}
+              onDelete={handleDeleteClient}
+              onAddCampaign={handleAddTrafficCampaign}
+              onEditCampaign={handleEditTrafficCampaign}
+              onDeleteCampaign={handleDeleteTrafficCampaign}
+              onAddInvestment={handleAddTrafficInvestment}
+              acquisitionError={acquisitionError}
+            />}
             {activePage === 'calendar-disabled' && (
               <div className="text-center">
                 <div className="p-4 bg-[#101728]/80 border border-white/[0.08] rounded-3xl mb-4 inline-block shadow-lg">

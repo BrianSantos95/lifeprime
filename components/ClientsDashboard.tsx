@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Gauge, Plus, Target, TrendingUp } from 'lucide-react';
-import { Client } from '../types';
+import { BarChart3, CalendarDays, ChevronLeft, ChevronRight, Gauge, Plus, Radio, Target, TrendingUp } from 'lucide-react';
+import { Client, TrafficCampaign, Transaction } from '../types';
+import AcquisitionPanel from './acquisition/AcquisitionPanel';
 import ClientFormModal, { ClientInput } from './clients/ClientFormModal';
 import ClientPortfolio from './clients/ClientPortfolio';
 
 interface ClientsDashboardProps {
   clients: Client[];
+  campaigns: TrafficCampaign[];
+  transactions: Transaction[];
   onAdd: (client: ClientInput) => Promise<boolean>;
   onEdit: (id: string, client: ClientInput) => Promise<boolean>;
   onDelete: (id: string) => Promise<void>;
+  onAddCampaign: (campaign: Omit<TrafficCampaign, 'id' | 'createdAt'>) => Promise<boolean>;
+  onEditCampaign: (id: string, campaign: Omit<TrafficCampaign, 'id' | 'createdAt'>) => Promise<boolean>;
+  onDeleteCampaign: (id: string) => Promise<void>;
+  onAddInvestment: (campaignId: string, amount: number, date: Date) => Promise<boolean>;
+  acquisitionError?: string;
 }
 
 const currencies = ['BRL', 'USD', 'EUR'] as const;
@@ -20,9 +28,22 @@ const storedGoal = (key: string) => Math.max(1, Number(localStorage.getItem(key)
 const money = (value: number, currency: Client['currency']) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency });
 
-export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: ClientsDashboardProps) {
+export default function ClientsDashboard({
+  clients,
+  campaigns,
+  transactions,
+  onAdd,
+  onEdit,
+  onDelete,
+  onAddCampaign,
+  onEditCampaign,
+  onDeleteCampaign,
+  onAddInvestment,
+  acquisitionError
+}: ClientsDashboardProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client>();
+  const [activeView, setActiveView] = useState<'production' | 'acquisition'>('production');
   const [selectedMonth, setSelectedMonth] = useState(() => monthKey(new Date()));
   const goalKey = 'habitpulse-client-page-goal-' + selectedMonth;
   const [goal, setGoal] = useState(() => storedGoal(goalKey));
@@ -108,7 +129,11 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: C
       <div>
         <p className="section-label">Gestão comercial</p>
         <h1 className="text-3xl font-extrabold text-white">Dashboard de clientes</h1>
-        <p className="text-sm text-slate-400">Metas, produção e desempenho comercial por mês.</p>
+        <p className="text-sm text-slate-400">
+          {activeView === 'production'
+            ? 'Metas, produção e desempenho comercial por mês.'
+            : 'Origem dos clientes, campanhas e retorno do investimento.'}
+        </p>
       </div>
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center rounded-2xl border border-white/10 bg-[#0c111e] p-1">
@@ -128,6 +153,45 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: C
       </div>
     </header>
 
+    <div
+      className="mb-6 inline-flex w-full rounded-2xl border border-white/10 bg-[#0a0f1b] p-1 sm:w-auto"
+      role="tablist"
+      aria-label="Visão do dashboard de clientes"
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeView === 'production'}
+        onClick={() => setActiveView('production')}
+        className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all sm:flex-none ${
+          activeView === 'production'
+            ? 'bg-blue-500/15 text-blue-300 shadow-[inset_0_0_0_1px_rgba(96,165,250,.2)]'
+            : 'text-slate-500 hover:text-slate-300'
+        }`}
+      >
+        <BarChart3 size={17}/>Produção
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={activeView === 'acquisition'}
+        onClick={() => setActiveView('acquisition')}
+        className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all sm:flex-none ${
+          activeView === 'acquisition'
+            ? 'bg-violet-500/15 text-violet-300 shadow-[inset_0_0_0_1px_rgba(167,139,250,.2)]'
+            : 'text-slate-500 hover:text-slate-300'
+        }`}
+      >
+        <Radio size={17}/>Aquisição
+      </button>
+    </div>
+
+    {acquisitionError && <div role="alert" className="mb-6 rounded-2xl border border-rose-500/20 bg-rose-500/[0.06] p-4 text-sm text-rose-200">
+      <b>Dados de aquisição indisponíveis.</b>
+      <span className="ml-1 text-rose-200/75">{acquisitionError}</span>
+    </div>}
+
+    {activeView === 'production' ? <>
     <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
       {cards.map(card => <div className="dashboard-card p-5" key={card.label}>
         <div className="flex items-start justify-between">
@@ -198,10 +262,21 @@ export default function ClientsDashboard({ clients, onAdd, onEdit, onDelete }: C
       </section>
     </div>
 
-    <ClientPortfolio clients={clients} onEdit={openForm} onDelete={onDelete}/>
+    <ClientPortfolio clients={clients} campaigns={campaigns} onEdit={openForm} onDelete={onDelete}/>
+    </> : <AcquisitionPanel
+      clients={clients}
+      campaigns={campaigns}
+      transactions={transactions}
+      selectedMonth={selectedMonth}
+      onAddCampaign={onAddCampaign}
+      onEditCampaign={onEditCampaign}
+      onDeleteCampaign={onDeleteCampaign}
+      onAddInvestment={onAddInvestment}
+    />}
 
     {formOpen && <ClientFormModal
       client={editingClient}
+      campaigns={campaigns}
       onClose={closeForm}
       onSave={saveClient}
     />}

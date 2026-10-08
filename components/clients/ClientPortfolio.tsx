@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Edit2, Search, Trash2 } from 'lucide-react';
-import { Client, ClientPaymentStatus, ClientProjectStatus } from '../../types';
+import { AcquisitionSource, Client, ClientPaymentStatus, ClientProjectStatus, TrafficCampaign } from '../../types';
 
 interface ClientPortfolioProps {
   clients: Client[];
+  campaigns: TrafficCampaign[];
   onEdit: (client: Client) => void;
   onDelete: (id: string) => Promise<void>;
 }
@@ -27,6 +28,16 @@ const stageLabels: Record<ClientProjectStatus, string> = {
   delivered: 'Entregue'
 };
 
+const sourceLabels: Record<AcquisitionSource, string> = {
+  not_informed: 'Origem não informada',
+  paid_traffic: 'Tráfego pago',
+  active_prospecting: 'Prospecção ativa',
+  organic: 'Orgânico',
+  referral: 'Indicação',
+  partnership: 'Parceria',
+  other: 'Outro'
+};
+
 const currencies = ['BRL', 'USD', 'EUR'] as const;
 const fieldClass = 'mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#090e19] px-4 text-sm text-white placeholder:text-slate-600 outline-none transition-all focus:border-blue-500/70 focus:ring-4 focus:ring-blue-500/10';
 
@@ -34,7 +45,7 @@ const money = (value: number, currency: Client['currency']) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency });
 
 const formatDate = (date?: string) => date
-  ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR')
+  ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR')
   : '--';
 
 function ClientActions({ client, onEdit, onDelete }: { client: Client; onEdit: (client: Client) => void; onDelete: (id: string) => Promise<void> }) {
@@ -64,16 +75,27 @@ function ClientActions({ client, onEdit, onDelete }: { client: Client; onEdit: (
   </div>;
 }
 
-export default function ClientPortfolio({ clients, onEdit, onDelete }: ClientPortfolioProps) {
+export default function ClientPortfolio({ clients, campaigns, onEdit, onDelete }: ClientPortfolioProps) {
   const [query, setQuery] = useState('');
+  const campaignNames = useMemo(
+    () => new Map(campaigns.map(campaign => [campaign.id, campaign.name])),
+    [campaigns]
+  );
   const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR');
   const visibleClients = useMemo(() => clients.filter(client =>
-    [client.name, client.contact, client.project]
+    [
+      client.name,
+      client.contact,
+      client.project,
+      client.acquisitionDetail,
+      sourceLabels[client.acquisitionSource || 'not_informed'],
+      client.trafficCampaignId ? campaignNames.get(client.trafficCampaignId) : ''
+    ]
       .filter(Boolean)
       .join(' ')
       .toLocaleLowerCase('pt-BR')
       .includes(normalizedQuery)
-  ), [clients, normalizedQuery]);
+  ), [campaignNames, clients, normalizedQuery]);
 
   const contractedTotals = useMemo(() => currencies
     .map(currency => {
@@ -94,9 +116,9 @@ export default function ClientPortfolio({ clients, onEdit, onDelete }: ClientPor
       <div className="relative w-full sm:max-w-sm">
         <Search className="pointer-events-none absolute left-4 top-4 text-slate-500" size={16}/>
         <input
-          aria-label="Buscar cliente ou projeto"
+          aria-label="Buscar cliente, projeto ou origem"
           className={`${fieldClass} !mt-0 !pl-11`}
-          placeholder="Buscar cliente ou projeto..."
+          placeholder="Buscar cliente, projeto ou origem..."
           value={query}
           onChange={event => setQuery(event.target.value)}
         />
@@ -129,6 +151,20 @@ export default function ClientPortfolio({ clients, onEdit, onDelete }: ClientPor
             <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${paymentStyles[client.paymentStatus]}`}>{paymentLabels[client.paymentStatus]}</span>
             <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-xs text-slate-400">{stageLabels[client.projectStatus]}</span>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs text-blue-300">
+              {sourceLabels[client.acquisitionSource || 'not_informed']}
+            </span>
+            {client.trafficCampaignId && campaignNames.get(client.trafficCampaignId) && (
+              <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 text-xs text-violet-300">
+                {campaignNames.get(client.trafficCampaignId)}
+              </span>
+            )}
+            {client.closedAfterFollowUp && (
+              <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-300">Follow-up</span>
+            )}
+          </div>
+          <p className="mt-2 text-[10px] text-slate-600">Conquistado em {formatDate(client.acquiredAt || client.createdAt)}</p>
           <p className="mt-3 text-xs text-slate-500">{formatDate(client.startedAt)} → {formatDate(client.deliveredAt)}</p>
         </article>)}
       </div>
@@ -152,9 +188,19 @@ export default function ClientPortfolio({ clients, onEdit, onDelete }: ClientPor
               <td className="px-4 py-4">
                 <p className="truncate font-semibold text-white">{client.name}</p>
                 <p className="truncate text-xs text-slate-500">{client.contact || '--'}</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[10px] text-blue-300">
+                    {sourceLabels[client.acquisitionSource || 'not_informed']}
+                  </span>
+                  {client.closedAfterFollowUp && <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">Follow-up</span>}
+                </div>
+                <p className="mt-1 text-[10px] text-slate-600">Conquistado: {formatDate(client.acquiredAt || client.createdAt)}</p>
               </td>
               <td className="px-4 py-4 text-sm text-slate-300">
                 <p className="truncate">{client.project || 'Não informado'}</p>
+                {client.trafficCampaignId && campaignNames.get(client.trafficCampaignId) && (
+                  <p className="mt-1 truncate text-[10px] text-violet-300">{campaignNames.get(client.trafficCampaignId)}</p>
+                )}
                 <p className="mt-1 truncate text-[10px] text-slate-500 xl:hidden">{stageLabels[client.projectStatus]} · {client.pageCount || 1} página(s)</p>
               </td>
               <td className="hidden px-3 py-4 font-bold text-white 2xl:table-cell">{client.pageCount || 1}</td>

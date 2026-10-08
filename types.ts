@@ -21,6 +21,8 @@ export interface Transaction {
   category: string;
   description: string;
   date: Date;
+  clientId?: string;
+  campaignId?: string;
 }
 
 export interface FinancialGoal {
@@ -62,6 +64,35 @@ export interface DailyTask {
 export type ClientPaymentStatus = 'pending' | 'half' | 'paid';
 export type ClientPaymentMethod = 'pix' | 'card';
 export type ClientProjectStatus = 'awaiting_info' | 'started' | 'review' | 'delivered';
+export type AcquisitionSource =
+  | 'not_informed'
+  | 'paid_traffic'
+  | 'active_prospecting'
+  | 'organic'
+  | 'referral'
+  | 'partnership'
+  | 'other';
+
+export type TrafficCampaignPlatform =
+  | 'meta_ads'
+  | 'google_ads'
+  | 'tiktok_ads'
+  | 'linkedin_ads'
+  | 'other';
+
+export type TrafficCampaignStatus = 'active' | 'paused' | 'completed';
+
+export interface TrafficCampaign {
+  id: string;
+  name: string;
+  platform: TrafficCampaignPlatform;
+  status: TrafficCampaignStatus;
+  monthlyBudget: number;
+  startDate: string;
+  endDate?: string;
+  notes?: string;
+  createdAt?: string;
+}
 
 export interface Client {
   id: string;
@@ -78,6 +109,11 @@ export interface Client {
   pageCount: number;
   startedAt?: string;
   deliveredAt?: string;
+  acquisitionSource: AcquisitionSource;
+  closedAfterFollowUp?: boolean;
+  trafficCampaignId?: string;
+  acquiredAt?: string;
+  acquisitionDetail?: string;
   notes?: string;
   createdAt?: string;
 }
