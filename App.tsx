@@ -1116,7 +1116,6 @@ const App: React.FC = () => {
     name: campaign.name.trim(),
     platform: campaign.platform,
     status: campaign.status,
-    monthly_budget: campaign.monthlyBudget || 0,
     start_date: campaign.startDate,
     end_date: campaign.endDate || null,
     notes: campaign.notes || null
@@ -1202,7 +1201,7 @@ const App: React.FC = () => {
     }).select().single();
     if (error) {
       console.error(error);
-      alert('Não foi possível registrar o investimento.');
+      alert('Não foi possível registrar a cobrança de Ads.');
       return false;
     }
     setTransactions(current => [...current, {

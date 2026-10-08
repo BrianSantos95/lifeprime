@@ -180,7 +180,6 @@ export const useSupabaseData = (session: any) => {
                         name: campaign.name,
                         platform: campaign.platform,
                         status: campaign.status,
-                        monthlyBudget: Number(campaign.monthly_budget) || 0,
                         startDate: campaign.start_date,
                         endDate: campaign.end_date || undefined,
                         notes: campaign.notes || '',

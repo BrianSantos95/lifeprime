@@ -87,7 +87,6 @@ export interface TrafficCampaign {
   name: string;
   platform: TrafficCampaignPlatform;
   status: TrafficCampaignStatus;
-  monthlyBudget: number;
   startDate: string;
   endDate?: string;
   notes?: string;

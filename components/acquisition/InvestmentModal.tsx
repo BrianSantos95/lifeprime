@@ -53,11 +53,11 @@ export default function InvestmentModal({ campaign, selectedMonth, onClose, onSa
     event.preventDefault();
     const parsedAmount = parseCurrencyInput(amount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      alert('Informe um investimento maior que zero.');
+      alert('Informe uma cobrança maior que zero.');
       return;
     }
     if (!hasValidPeriod || !date || date < allowedStart || date > allowedEnd) {
-      alert('A data precisa estar dentro do mês selecionado e da vigência da campanha.');
+      alert('A data da cobrança precisa estar dentro do mês selecionado e da vigência da campanha.');
       return;
     }
 
@@ -84,7 +84,7 @@ export default function InvestmentModal({ campaign, selectedMonth, onClose, onSa
             <ReceiptText size={19}/>
           </span>
           <div>
-            <b id="investment-form-title" className="text-lg text-white">Registrar investimento</b>
+            <b id="investment-form-title" className="text-lg text-white">Registrar cobrança</b>
             <p className="mt-1 text-xs text-slate-500">{campaign.name}</p>
           </div>
         </div>
@@ -95,12 +95,12 @@ export default function InvestmentModal({ campaign, selectedMonth, onClose, onSa
 
       <form onSubmit={submit} className="grid gap-5 p-6 sm:grid-cols-2">
         <div className="rounded-2xl border border-blue-500/15 bg-blue-500/[0.04] p-4 text-xs leading-relaxed text-slate-400 sm:col-span-2">
-          Este valor também será lançado no <b className="text-blue-300">Financeiro</b> como despesa de Tráfego pago.
+          Cada cobrança vira uma despesa de <b className="text-blue-300">Tráfego pago</b> no Financeiro e entra no total desta campanha.
         </div>
         {!hasValidPeriod && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-xs leading-relaxed text-amber-200 sm:col-span-2">
-          Esta campanha não estava vigente no mês selecionado. Navegue até um mês dentro do período da campanha para registrar o investimento.
+          Esta campanha não estava vigente no mês selecionado. Navegue até um mês dentro do período da campanha para adicionar a cobrança.
         </div>}
-        <label className={labelClass}>Valor investido · BRL
+        <label className={labelClass}>Valor cobrado · BRL
           <input
             required
             autoFocus
@@ -111,7 +111,7 @@ export default function InvestmentModal({ campaign, selectedMonth, onClose, onSa
             onChange={event => setAmount(event.target.value)}
           />
         </label>
-        <label className={labelClass}>Data do investimento
+        <label className={labelClass}>Data da cobrança
           <input
             required
             type="date"
@@ -127,7 +127,7 @@ export default function InvestmentModal({ campaign, selectedMonth, onClose, onSa
         <div className="flex justify-end gap-3 border-t border-white/5 pt-5 sm:col-span-2">
           <button type="button" disabled={saving} onClick={onClose} className="px-5 py-3 text-sm text-slate-400 hover:text-white disabled:opacity-40">Cancelar</button>
           <button type="submit" disabled={saving || !hasValidPeriod} className="btn-glow-primary min-w-36 rounded-xl px-6 py-3 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">
-            {saving ? 'Registrando...' : 'Registrar valor'}
+            {saving ? 'Salvando...' : 'Adicionar cobrança'}
           </button>
         </div>
       </form>

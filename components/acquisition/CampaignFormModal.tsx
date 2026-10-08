@@ -1,7 +1,6 @@
 import { FormEvent, MouseEvent, useEffect, useState } from 'react';
 import { Megaphone, X } from 'lucide-react';
 import { TrafficCampaign, TrafficCampaignPlatform, TrafficCampaignStatus } from '../../types';
-import { parseCurrencyInput } from '../../lib/currency';
 
 export type TrafficCampaignInput = Omit<TrafficCampaign, 'id' | 'createdAt'>;
 
@@ -35,7 +34,6 @@ const emptyCampaign: TrafficCampaignInput = {
   name: '',
   platform: 'meta_ads',
   status: 'active',
-  monthlyBudget: 0,
   startDate: localDateKey(),
   endDate: '',
   notes: ''
@@ -48,7 +46,6 @@ const toInput = (campaign: TrafficCampaign): TrafficCampaignInput => ({
   name: campaign.name,
   platform: campaign.platform,
   status: campaign.status,
-  monthlyBudget: campaign.monthlyBudget,
   startDate: campaign.startDate,
   endDate: campaign.endDate || '',
   notes: campaign.notes || ''
@@ -56,11 +53,6 @@ const toInput = (campaign: TrafficCampaign): TrafficCampaignInput => ({
 
 export default function CampaignFormModal({ campaign, onClose, onSave }: CampaignFormModalProps) {
   const [form, setForm] = useState<TrafficCampaignInput>(() => campaign ? toInput(campaign) : emptyCampaign);
-  const [budget, setBudget] = useState(() =>
-    campaign?.monthlyBudget
-      ? campaign.monthlyBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-      : ''
-  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -77,12 +69,7 @@ export default function CampaignFormModal({ campaign, onClose, onSave }: Campaig
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const monthlyBudget = budget.trim() ? parseCurrencyInput(budget) : 0;
     if (!form.name.trim()) return;
-    if (!Number.isFinite(monthlyBudget) || monthlyBudget < 0) {
-      alert('Informe um orçamento mensal válido.');
-      return;
-    }
     if (form.status === 'completed' && !form.endDate) {
       alert('Informe a data de encerramento da campanha.');
       return;
@@ -97,7 +84,6 @@ export default function CampaignFormModal({ campaign, onClose, onSave }: Campaig
       const saved = await onSave({
         ...form,
         name: form.name.trim(),
-        monthlyBudget,
         endDate: form.status === 'completed' ? form.endDate : ''
       });
       if (saved) onClose();
@@ -121,7 +107,7 @@ export default function CampaignFormModal({ campaign, onClose, onSave }: Campaig
           </span>
           <div>
             <b id="campaign-form-title" className="text-lg text-white">{campaign ? 'Editar campanha' : 'Nova campanha'}</b>
-            <p className="mt-1 text-xs text-slate-500">Cadastre os tráfegos que estão rodando agora.</p>
+            <p className="mt-1 text-xs text-slate-500">Depois, registre cada cobrança feita no cartão.</p>
           </div>
         </div>
         <button type="button" aria-label="Fechar" disabled={saving} className="rounded-lg p-2 text-slate-500 hover:bg-white/5 hover:text-white disabled:opacity-40" onClick={onClose}>
@@ -150,16 +136,7 @@ export default function CampaignFormModal({ campaign, onClose, onSave }: Campaig
             {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
-        <label className={labelClass}>Orçamento mensal · BRL
-          <input
-            className={fieldClass}
-            inputMode="decimal"
-            placeholder="Ex: 1.500,00"
-            value={budget}
-            onChange={event => setBudget(event.target.value)}
-          />
-        </label>
-        <label className={labelClass}>Data de início
+        <label className={`${labelClass} ${form.status === 'completed' ? '' : 'md:col-span-2'}`}>Data de início
           <input required type="date" className={fieldClass} value={form.startDate} onChange={event => setForm({ ...form, startDate: event.target.value })}/>
         </label>
         {form.status === 'completed' && <label className={labelClass}>Data de encerramento

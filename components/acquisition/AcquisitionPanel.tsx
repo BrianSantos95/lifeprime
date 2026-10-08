@@ -108,16 +108,6 @@ export default function AcquisitionPanel({
     const mediaRoi = totalInvestment > 0
       ? (attributedRevenue - totalInvestment) / totalInvestment * 100
       : null;
-    const periodCampaigns = campaigns.filter(campaign =>
-      campaign.startDate.slice(0, 7) <= selectedMonth
-      && (!campaign.endDate || campaign.endDate.slice(0, 7) >= selectedMonth)
-    );
-    const periodBudget = periodCampaigns
-      .reduce((sum, campaign) => sum + campaign.monthlyBudget, 0);
-    const periodCampaignIds = new Set(periodCampaigns.map(campaign => campaign.id));
-    const periodInvestment = campaignExpenses
-      .filter(transaction => transaction.campaignId && periodCampaignIds.has(transaction.campaignId))
-      .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
     const sourceCounts = (Object.keys(sourceConfig) as AcquisitionSource[])
       .map(source => ({
         source,
@@ -128,21 +118,19 @@ export default function AcquisitionPanel({
     const followUpKnown = acquiredClients.filter(client => client.closedAfterFollowUp !== undefined);
     const followUpCount = followUpKnown.filter(client => client.closedAfterFollowUp).length;
 
-    const expensesByCampaign = new Map<string, number>();
-    campaignExpenses.forEach(transaction => {
-      const campaignId = transaction.campaignId!;
-      expensesByCampaign.set(campaignId, (expensesByCampaign.get(campaignId) || 0) + Number(transaction.amount || 0));
-    });
-
     const campaignRows = campaigns
       .map(campaign => {
         const campaignClients = trafficClients.filter(client => client.trafficCampaignId === campaign.id);
         const campaignRevenue = campaignClients
           .filter(client => client.currency === 'BRL')
           .reduce((sum, client) => sum + Number(client.amount || 0), 0);
-        const spend = expensesByCampaign.get(campaign.id) || 0;
+        const investments = campaignExpenses
+          .filter(transaction => transaction.campaignId === campaign.id)
+          .sort((a, b) => b.date.getTime() - a.date.getTime());
+        const spend = investments.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
         return {
           campaign,
+          investments,
           spend,
           clients: campaignClients.length,
           foreignClients: campaignClients.filter(client => client.currency !== 'BRL').length,
@@ -167,8 +155,7 @@ export default function AcquisitionPanel({
       cac,
       roas,
       mediaRoi,
-      periodBudget,
-      periodInvestment,
+      totalCharges: campaignExpenses.length,
       sourceCounts,
       followUpKnown: followUpKnown.length,
       followUpCount,
@@ -179,9 +166,6 @@ export default function AcquisitionPanel({
     };
   }, [campaigns, clients, selectedMonth, transactions]);
 
-  const budgetUsage = metrics.periodBudget > 0
-    ? Math.round(metrics.periodInvestment / metrics.periodBudget * 100)
-    : 0;
   const comparisonMax = Math.max(metrics.totalInvestment, metrics.attributedRevenue, 1);
   const trafficShare = metrics.acquiredClients.length
     ? Math.round(metrics.trafficClients.length / metrics.acquiredClients.length * 100)
@@ -195,9 +179,7 @@ export default function AcquisitionPanel({
     {
       label: 'Investido em tráfego',
       value: money(metrics.totalInvestment),
-      detail: metrics.periodBudget
-        ? `campanhas vigentes usaram ${budgetUsage}% do orçamento`
-        : 'orçamento mensal ainda não informado',
+      detail: `${metrics.totalCharges} ${metrics.totalCharges === 1 ? 'cobrança registrada' : 'cobranças registradas'} no mês`,
       icon: WalletCards,
       color: 'text-blue-400'
     },
@@ -368,7 +350,7 @@ export default function AcquisitionPanel({
             <h2 className="font-bold text-white">Campanhas de tráfego</h2>
             <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">{activeCampaigns} ON</span>
           </div>
-          <p className="mt-1 text-xs text-slate-500">Orçamento, investimento, clientes e retorno por campanha.</p>
+          <p className="mt-1 text-xs text-slate-500">Cobranças do cartão, clientes e retorno por campanha.</p>
         </div>
         <button type="button" onClick={() => openCampaignForm()} className="btn-glow-primary flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold text-white">
           <Plus size={17}/>Nova campanha
@@ -380,15 +362,12 @@ export default function AcquisitionPanel({
           <Megaphone size={22}/>
         </span>
         <p className="font-semibold text-white">Cadastre seu primeiro tráfego</p>
-        <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">Depois, vincule os clientes conquistados e registre os investimentos para acompanhar CAC, ROAS e ROI.</p>
+        <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">Depois, vincule os clientes conquistados e adicione cada cobrança de Ads feita no cartão.</p>
         <button type="button" onClick={() => openCampaignForm()} className="mt-5 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/[0.07]">
           Criar campanha
         </button>
       </div> : <div className="grid gap-4 xl:grid-cols-2">
         {metrics.campaignRows.map(row => {
-          const budgetProgress = row.campaign.monthlyBudget > 0
-            ? Math.min(100, row.spend / row.campaign.monthlyBudget * 100)
-            : 0;
           const status = statusConfig[row.campaign.status];
           return <article key={row.campaign.id} className="rounded-2xl border border-white/[0.08] bg-[#0b111e]/80 p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
@@ -411,7 +390,7 @@ export default function AcquisitionPanel({
 
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-600">Investido</p>
+                <p className="text-[10px] uppercase tracking-wider text-slate-600">Cobrado no mês</p>
                 <p className="mt-1 text-sm font-bold text-white">{money(row.spend)}</p>
               </div>
               <div>
@@ -428,14 +407,20 @@ export default function AcquisitionPanel({
               </div>
             </div>
 
-            <div className="mt-5">
-              <div className="mb-2 flex items-center justify-between gap-3 text-[10px]">
-                <span className="text-slate-500">Orçamento: {money(row.campaign.monthlyBudget)}</span>
-                <span className="font-semibold text-slate-300">{row.campaign.monthlyBudget ? Math.round(row.spend / row.campaign.monthlyBudget * 100) + '%' : 'não definido'}</span>
+            <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cobranças do mês</p>
+                <span className="text-[10px] text-slate-600">{row.investments.length} {row.investments.length === 1 ? 'lançamento' : 'lançamentos'}</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/[0.05]">
-                <div className={`h-full rounded-full ${row.spend > row.campaign.monthlyBudget && row.campaign.monthlyBudget > 0 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{ width: budgetProgress + '%' }}/>
-              </div>
+              {row.investments.length ? <div className="max-h-40 space-y-1.5 overflow-y-auto pr-1 custom-scrollbar">
+                {row.investments.map(investment => <div key={investment.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.025] px-3 py-2.5 text-xs">
+                  <span className="flex items-center gap-2 text-slate-400">
+                    <ReceiptText size={13} className="text-emerald-400"/>
+                    {investment.date.toLocaleDateString('pt-BR')}
+                  </span>
+                  <b className="text-slate-200">{money(Number(investment.amount || 0))}</b>
+                </div>)}
+              </div> : <p className="py-2 text-xs text-slate-600">Nenhuma cobrança registrada neste mês.</p>}
             </div>
 
             <div className="mt-4 flex flex-col gap-3 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -445,7 +430,7 @@ export default function AcquisitionPanel({
                 {row.foreignClients > 0 && <p className="mt-1 text-amber-400/80">{row.foreignClients} cliente(s) estrangeiro(s) fora da receita</p>}
               </div>
               <button type="button" onClick={() => setInvestmentCampaign(row.campaign)} className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 text-xs font-bold text-emerald-300 hover:bg-emerald-500/15">
-                <ReceiptText size={15}/>Registrar investimento
+                <Plus size={15}/>Adicionar cobrança
               </button>
             </div>
           </article>;
